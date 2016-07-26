@@ -22,15 +22,14 @@ export
 Agents and environments should implement a small interface:
 
 - r,s = observe(env)
-- a = act(agent, env)
+- a = act(agent, r, s)
 """
 
 abstract AbstractState
 abstract AbstractAgent
-abstract AbstractEnvironment
+act(agent::AbstractAgent, reward::Number, state::AbstractState) = error("unimplemented: act($agent, $reward, $state)")
 
-# catch-alls
-act(agent::AbstractAgent, env::AbstractEnvironment) = error("unimplemented: act($agent, $env)")
+abstract AbstractEnvironment
 observe(env::AbstractEnvironment) = error("unimplemented: observe($env)")
 
 # ----------------------------------------------------------------
