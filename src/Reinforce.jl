@@ -2,14 +2,24 @@ module Reinforce
 
 using Reexport
 @reexport using StatsBase
+@reexport using LearnBase
 
 export
 	AbstractState,
 	AbstractAgent,
 	AbstractEnvironment,
 
-	act,
-	observe,
+	AbstractActionSet,
+	ContinuousActionSet,
+	DiscreteActionSet,
+
+	observe!,
+	reward,
+	reward!,
+	state,
+	state!,
+	actions,
+	action,
 
 	state,
 	state!,
@@ -18,69 +28,76 @@ export
 
 # ----------------------------------------------------------------
 
-"""
-Agents and environments should implement a small interface:
+# # we can use uniform distributions to represent most action sets
+# # by overloading `in`, we can check that an action is valid
+# Base.in(x::Number, dist::Distributions.ContinuousUniform) = minimum(dist) <= x <= maximum(dist)
+# Base.in(x::Integer, dist::Distributions.DiscreteUniform) = x in (minimum(dist):maximum(dist))
 
-- r,s = observe(env)
-- a = act(agent, r, s)
-"""
+abstract AbstractActionSet
 
-abstract AbstractState
-abstract AbstractAgent
-act(agent::AbstractAgent, reward::Number, state::AbstractState) = error("unimplemented: act($agent, $reward, $state)")
+immutable ContinuousActionSet{T} <: AbstractActionSet
+	amin::T
+	amax::T
+end
+Base.rand(aset::ContinuousActionSet) = rand() * (aset.amax - aset.amin) + aset.amin
+Base.in(x, aset::ContinuousActionSet) = aset.amin <= x <= aset.amax
+
+immutable DiscreteActionSet{T} <: AbstractActionSet
+	actions::T
+end
+Base.rand(aset::DiscreteActionSet) = rand(aset.actions)
+Base.in(x, aset::DiscreteActionSet) = x in aset.actions
+
+# ----------------------------------------------------------------
 
 abstract AbstractEnvironment
-observe(env::AbstractEnvironment) = error("unimplemented: observe($env)")
+abstract AbstractState
+abstract AbstractAgent
 
-# ----------------------------------------------------------------
-
-"A StateVector holds both the functions which will populate the state, and the most recent state."
-type StateVector{S} <: AbstractState
-	queries::Vector{Function}
-	state::Vector{S}
-	names::Vector{String}
+# `r, s, A = observe!(env)` should return `(reward, state, actions)`
+# Note: most environments will not implement this directly
+function observe!(env::AbstractEnvironment)
+    reward!(env), state!(env), actions(env)
 end
 
-function StateVector(queries::AbstractVector{Function}; names=fill("",length(queries)))
-	StateVector(queries, [f() for f in queries], names)
-end
-function StateVector(queries::Function...; names=fill("",length(queries)))
-	StateVector(Function[f for f in queries], names=names)
-end
+# `r = reward!(env)` returns the current reward, optionally updating it first
+function reward end
+function reward! end
 
-Base.length(sv::StateVector) = length(sv.queries)
+# `s = state!(env)` returns the current state, optionally updating it first
+function state end
+function state! end
 
-"retreive the most recently calculated state"
-state(sv::StateVector) = sv.state
+# `A = actions(env)` returns a list/set/description of valid actions
+function actions end
 
-"update the state, then return it"
-function state!(sv::StateVector)
-	for (i,f) in enumerate(sv.queries)
-		sv.state[i] = f()
-	end
-	sv.state
-end
-
-# ----------------------------------------------------------------
-
-type History{T}
-    sv::StateVector{T}
-    states::Matrix{T}
-end
-History{T}(sv::StateVector{T}) = History(sv, Matrix{T}(length(sv),0))
-
-function state!(hist::History)
-	s = state!(hist.sv)
-	hist.states = hcat(hist.states, s)
-	s
-end
-
-StatsBase.nobs(hist::History) = size(hist.states, 2)
+# `a = action(agent, r, s, A)` should take in the last reward `r`, current state `s`, 
+#      and set of valid actions `A`, then return an action `a`
+function action end
 
 # ----------------------------------------------------------------
 
 
+# """
+# Agents and environments should implement a small interface:
 
+# - r,s = observe(env)
+# - a = act(agent, r, s)
+# """
+
+# abstract AbstractState
+# abstract AbstractAgent
+# act(agent::AbstractAgent, reward::Number, state::AbstractState) = error("unimplemented: act($agent, $reward, $state)")
+
+# abstract AbstractEnvironment
+# observe(env::AbstractEnvironment) = error("unimplemented: observe($env)")
+# actions(env::AbstractEnvironment) = error("unimplemented: actions($env)")
+
+# ----------------------------------------------------------------
+
+
+include("states.jl")
+include("agents.jl")
 
 # ----------------------------------------------------------------
 
