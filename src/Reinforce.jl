@@ -6,13 +6,16 @@ using Reexport
 
 export
 	AbstractState,
-	AbstractAgent,
+	AbstractPolicy,
 	AbstractEnvironment,
 
 	AbstractActionSet,
 	ContinuousActionSet,
 	DiscreteActionSet,
 
+	reset!,
+	step!,
+	episode!,
 	observe!,
 	reward,
 	reward!,
@@ -24,7 +27,9 @@ export
 	state,
 	state!,
 	StateVector,
-	History
+	History,
+
+	RandomPolicy
 
 # ----------------------------------------------------------------
 
@@ -47,18 +52,26 @@ immutable DiscreteActionSet{T} <: AbstractActionSet
 end
 Base.rand(aset::DiscreteActionSet) = rand(aset.actions)
 Base.in(x, aset::DiscreteActionSet) = x in aset.actions
+Base.length(aset::DiscreteActionSet) = length(aset.actions)
 
 # ----------------------------------------------------------------
 
 abstract AbstractEnvironment
 abstract AbstractState
-abstract AbstractAgent
+abstract AbstractPolicy
 
 # `r, s, A = observe!(env)` should return `(reward, state, actions)`
 # Note: most environments will not implement this directly
 function observe!(env::AbstractEnvironment)
     reward!(env), state!(env), actions(env)
 end
+
+# `reset!(env)` resets an episode
+function reset! end
+
+# observe and get action from policy, plus any other details.
+#	returns false when the episode is finished
+function step! end
 
 # `r = reward!(env)` returns the current reward, optionally updating it first
 function reward end
@@ -71,23 +84,51 @@ function state! end
 # `A = actions(env)` returns a list/set/description of valid actions
 function actions end
 
-# `a = action(agent, r, s, A)` should take in the last reward `r`, current state `s`, 
+# `a = action(policy, r, s, A)` should take in the last reward `r`, current state `s`, 
 #      and set of valid actions `A`, then return an action `a`
 function action end
 
 # ----------------------------------------------------------------
 
+# override these for custom functionality for your environment
+on_step(env::AbstractEnvironment, i::Int) = return
+# function on_episode_finished(env::AbstractEnvironment, episode_num::Int,
+# 							 iteration_num::Int, total_reward::Float64)
+# 	info("Episode $episode_num finished after $iteration_num steps.  reward = $total_reward")
+# end
+
+# run a single episode. by default, it will run until `step!` returns false
+function episode!(env::AbstractEnvironment,
+				  policy::AbstractPolicy,
+				  episode_num::Int = 1;
+				  maxiter = typemax(Int))
+	reset!(env)
+	i = 1
+	total_reward = 0.0
+	while true
+		done = step!(env, policy)
+		on_step(env, i)
+		total_reward += reward(env)
+		if done || i > maxiter
+			break
+		end
+		i += 1
+	end
+	# on_episode_finished(env, episode_num, i, total_reward)
+	total_reward, i
+end
+
 
 # """
-# Agents and environments should implement a small interface:
+# Policys and environments should implement a small interface:
 
 # - r,s = observe(env)
-# - a = act(agent, r, s)
+# - a = act(policy, r, s)
 # """
 
 # abstract AbstractState
-# abstract AbstractAgent
-# act(agent::AbstractAgent, reward::Number, state::AbstractState) = error("unimplemented: act($agent, $reward, $state)")
+# abstract AbstractPolicy
+# act(policy::AbstractPolicy, reward::Number, state::AbstractState) = error("unimplemented: act($policy, $reward, $state)")
 
 # abstract AbstractEnvironment
 # observe(env::AbstractEnvironment) = error("unimplemented: observe($env)")
