@@ -33,11 +33,6 @@ export
 
 # ----------------------------------------------------------------
 
-# # we can use uniform distributions to represent most action sets
-# # by overloading `in`, we can check that an action is valid
-# Base.in(x::Number, dist::Distributions.ContinuousUniform) = minimum(dist) <= x <= maximum(dist)
-# Base.in(x::Integer, dist::Distributions.DiscreteUniform) = x in (minimum(dist):maximum(dist))
-
 abstract AbstractActionSet
 
 immutable ContinuousActionSet{T} <: AbstractActionSet
@@ -53,6 +48,7 @@ end
 Base.rand(aset::DiscreteActionSet) = rand(aset.actions)
 Base.in(x, aset::DiscreteActionSet) = x in aset.actions
 Base.length(aset::DiscreteActionSet) = length(aset.actions)
+Base.getindex(aset::DiscreteActionSet, i::Int) = aset.actions[i]
 
 # ----------------------------------------------------------------
 
@@ -92,53 +88,33 @@ function action end
 
 # override these for custom functionality for your environment
 on_step(env::AbstractEnvironment, i::Int) = return
-# function on_episode_finished(env::AbstractEnvironment, episode_num::Int,
-# 							 iteration_num::Int, total_reward::Float64)
-# 	info("Episode $episode_num finished after $iteration_num steps.  reward = $total_reward")
-# end
 
 # run a single episode. by default, it will run until `step!` returns false
 function episode!(env::AbstractEnvironment,
-				  policy::AbstractPolicy,
-				  episode_num::Int = 1;
-				  maxiter = typemax(Int))
+				  policy::AbstractPolicy;
+				  maxiter::Int = typemax(Int),
+				  stepfunc::Function = on_step)
 	reset!(env)
 	i = 1
 	total_reward = 0.0
 	while true
 		done = step!(env, policy)
-		on_step(env, i)
+		stepfunc(env, i)
 		total_reward += reward(env)
 		if done || i > maxiter
 			break
 		end
 		i += 1
 	end
-	# on_episode_finished(env, episode_num, i, total_reward)
 	total_reward, i
 end
 
-
-# """
-# Policys and environments should implement a small interface:
-
-# - r,s = observe(env)
-# - a = act(policy, r, s)
-# """
-
-# abstract AbstractState
-# abstract AbstractPolicy
-# act(policy::AbstractPolicy, reward::Number, state::AbstractState) = error("unimplemented: act($policy, $reward, $state)")
-
-# abstract AbstractEnvironment
-# observe(env::AbstractEnvironment) = error("unimplemented: observe($env)")
-# actions(env::AbstractEnvironment) = error("unimplemented: actions($env)")
 
 # ----------------------------------------------------------------
 
 
 include("states.jl")
-include("agents.jl")
+include("policy.jl")
 
 # ----------------------------------------------------------------
 
