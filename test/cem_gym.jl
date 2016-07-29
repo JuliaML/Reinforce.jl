@@ -63,16 +63,16 @@ end
 
 
 function do_cem_test(; env = GymEnv("CartPole-v0"),
-					   maxiter = 500,
+					   maxiter = 200,
 					   cem_iter = 100,
-					   cem_batch_size = 25,
+					   cem_batch_size = 20,
 					   cem_elite_frac = 0.2,
 					   stopping_reward_std = 1e-2,
 					   stopping_norm = 1e-2)
 	# do one step to ensure we have state/actions
-	step!(env)
+	# step!(env)
 	n = (length(state(env)) + 1) * length(actions(env))
-	reset!(env)
+	# reset!(env)
 
 	# helpers... noisy_episode is a mappable function of θ to reward
 	noisy_episode = θ -> noisy_evaluation(env, θ, maxiter=maxiter)
@@ -112,7 +112,7 @@ function do_cem_test(; env = GymEnv("CartPole-v0"),
 		diffnorm = norm(σ - last_σ)
 		@show diffnorm stdRs
 		if diffnorm < stopping_norm || stdRs < stopping_reward_std
-			info("Converged.")
+			info("Converged after $(i*cem_batch_size) episodes.")
 			break
 		end
 		last_σ[:] = σ
