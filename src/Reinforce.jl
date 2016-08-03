@@ -1,8 +1,12 @@
+
+__precompile__()
+
 module Reinforce
 
 using Reexport
 @reexport using StatsBase
 @reexport using LearnBase
+using RecipesBase
 
 export
 	AbstractState,
@@ -115,6 +119,8 @@ end
 
 include("states.jl")
 include("policy.jl")
+
+include("envs/cartpole.jl")
 
 # ----------------------------------------------------------------
 
