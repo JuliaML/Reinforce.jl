@@ -7,7 +7,7 @@ type StateVector{S} <: AbstractState
 end
 
 function StateVector(queries::AbstractVector{Function}; names=fill("",length(queries)))
-	StateVector(queries, [f() for f in queries], names)
+	StateVector(queries, zeros(length(queries)), names)
 end
 function StateVector(queries::Function...; names=fill("",length(queries)))
 	StateVector(Function[f for f in queries], names=names)
