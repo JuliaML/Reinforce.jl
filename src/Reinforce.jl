@@ -40,11 +40,29 @@ export
 abstract AbstractActionSet
 
 immutable ContinuousActionSet{T} <: AbstractActionSet
-	amin::T
-	amax::T
+	  amin::T
+	  amax::T
+
+    function ContinuousActionSet{S<:AbstractVector}(amin::S, amax::S)
+        if !(length(amin) == length(amax))
+            error("For multi-valued continuous action sets, min and max value must have same length")
+        end
+        new(amin, amax)
+    end
+
+    ContinuousActionSet{S<:Number}(amin::S, amax::S) = new(amin, amax)
 end
-Base.rand(aset::ContinuousActionSet) = rand() * (aset.amax - aset.amin) + aset.amin
-Base.in(x, aset::ContinuousActionSet) = aset.amin <= x <= aset.amax
+
+# outer constructor to handle dispatch to above inner constructors
+ContinuousActionSet{T}(amin::T, amax::T) = ContinuousActionSet{T}(amin, amax)
+
+Base.length(aset::ContinuousActionSet) = length(aset.amin)
+Base.rand{T<:Number}(aset::ContinuousActionSet{T}) = rand() * (aset.amax - aset.amin) + aset.amin
+Base.rand{T<:AbstractVector}(aset::ContinuousActionSet{T}) = rand(length(aset)) .* (aset.amax - aset.amin) + aset.amin
+
+Base.in{T<:Number}(x::Number, aset::ContinuousActionSet{T}) = aset.amin <= x <= aset.amax
+Base.in{T<:AbstractVector}(x::AbstractVector, aset::ContinuousActionSet{T}) =
+    length(x) == length(aset) && all(aset.amin .<= x .<= aset.amax)
 
 immutable DiscreteActionSet{T} <: AbstractActionSet
 	actions::T
@@ -53,6 +71,21 @@ Base.rand(aset::DiscreteActionSet) = rand(aset.actions)
 Base.in(x, aset::DiscreteActionSet) = x in aset.actions
 Base.length(aset::DiscreteActionSet) = length(aset.actions)
 Base.getindex(aset::DiscreteActionSet, i::Int) = aset.actions[i]
+
+immutable MultiActionSet{T<:Tuple} <: AbstractActionSet
+    asets::T
+end
+
+MultiActionSet(asets::AbstractActionSet...) = MultiActionSet(asets)
+
+Base.rand(::Type{Vector}, aset::MultiActionSet) = [rand(i) for i in aset.asets]
+Base.rand(::Type{Tuple}, aset::MultiActionSet) = ntuple(i->rand(aset.asets[i]), length(aset.asets))
+Base.rand(aset::MultiActionSet) = rand(Vector, aset)
+
+Base.in(x, aset::MultiActionSet) = all(map(in, x, aset.asets))
+
+# semantics for this one aren't very clear, so skip it for now
+# Base.length(aset::MultiActionSet) = reduce(+, 0, map(length, aset.asets))
 
 # ----------------------------------------------------------------
 
@@ -84,7 +117,7 @@ function state! end
 # `A = actions(env)` returns a list/set/description of valid actions
 function actions end
 
-# `a = action(policy, r, s, A)` should take in the last reward `r`, current state `s`, 
+# `a = action(policy, r, s, A)` should take in the last reward `r`, current state `s`,
 #      and set of valid actions `A`, then return an action `a`
 function action end
 
@@ -92,6 +125,7 @@ function action end
 
 # override these for custom functionality for your environment
 on_step(env::AbstractEnvironment, i::Int) = return
+check_constraints(env::AbstractEnvironment, s, a) = return
 
 # run a single episode. by default, it will run until `step!` returns false
 function episode!(env::AbstractEnvironment,
