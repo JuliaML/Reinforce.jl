@@ -93,11 +93,6 @@ Base.in(x, aset::MultiActionSet) = all(map(in, x, aset.asets))
 
 abstract AbstractEnvironment
 
-# # `r, s, A = observe!(env)` should return `(reward, state, actions)`
-# # Note: most environments will not implement this directly
-# function observe!(env::AbstractEnvironment)
-#     reward!(env), state!(env), actions(env)
-# end
 
 """
 `reset!(env)`
@@ -106,9 +101,6 @@ Reset an environment.
 """
 function reset! end
 
-# observe and get action from policy, plus any other details.
-#	returns false when the episode is finished
-# done = step!()
 
 """
 r, s′ = step!(env, s, a)
@@ -162,42 +154,11 @@ Note that a policy could do a 'sarsa-style' update simply by saving the last sta
 """
 function action end
 
-# ----------------------------------------------------------------
-# Episode iteration
-
-
-# override these for custom functionality for your environment
-on_step(env::AbstractEnvironment, i::Int) = return
-check_constraints(env::AbstractEnvironment, s, a) = return
-
-# run a single episode. by default, it will run until `step!` returns false
-function episode!(env::AbstractEnvironment,
-				  policy::AbstractPolicy;
-				  maxiter::Int = typemax(Int),
-				  stepfunc::Function = on_step)
-	reset!(env)
-	i = 1
-	total_reward = 0.0
-	reset!(env)
-	r = reward(env)
-	while true
-		s = state(env)
-		a = action(policy, r, s, actions(env))
-		r, s = step!(env, s, a)
-		stepfunc(env, i)
-		total_reward += r
-		if done(env) || i > maxiter
-			break
-		end
-		i += 1
-	end
-	total_reward, i
-end
-
 
 # ----------------------------------------------------------------
 # concrete implementations
 
+include("episodes.jl")
 include("states.jl")
 include("policy.jl")
 
