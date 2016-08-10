@@ -1,3 +1,3 @@
 
 type RandomPolicy <: AbstractPolicy end
-action(policy::RandomPolicy, r, s, A) = rand(A)
+action(policy::RandomPolicy, r, s′, A′) = rand(A′)

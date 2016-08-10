@@ -23,10 +23,10 @@ type CartPole <: AbstractEnvironment
 end
 CartPole() = CartPole(0.1rand(4)-0.05, 0.0)
 
+reset!(env::CartPole)  = (env.state = 0.1rand(4)-0.05; env.reward = 0.0; return)
 
-function step!(env::CartPole, policy::AbstractPolicy = RandomPolicy())
-	s = env.state
-	a = action(policy, env.reward, s, actions(env))
+function step!(env::CartPole, s, a)
+	s = state(env)
 	x, xvel, θ, θvel = s
 	
 	force = (a == 1 ? -1 : 1) * force_mag
@@ -41,17 +41,19 @@ function step!(env::CartPole, policy::AbstractPolicy = RandomPolicy())
 	s[3] = θ    += τ * θvel
 	s[4] = θvel += τ * θacc
 
-	done = !(-x_threshold <= x <= x_threshold && -θ_threshold <= θ <= θ_threshold)
-	env.reward = done ? 0.0 : 1.0
-	done
+	env.reward = done(env) ? 0.0 : 1.0
+	env.reward, s
 end
 
-reset!(env::CartPole)  = (env.state = 0.1rand(4)-0.05; env.reward = 0.0; return)
-actions(env::CartPole) = DiscreteActionSet(1:2)
-reward(env::CartPole)  = env.reward
-reward!(env::CartPole) = env.reward
-state(env::CartPole)   = env.state
-state!(env::CartPole)  = env.state
+function Base.done(env::CartPole)
+	x, xvel, θ, θvel = state(env)
+	!(-x_threshold <= x <= x_threshold &&
+	  -θ_threshold <= θ <= θ_threshold)
+end
+
+actions(env::CartPole, s) = DiscreteActionSet(1:2)
+
+# ------------------------------------------------------------------------
 
 @recipe function f(env::CartPole, t, iter, hists)
 	x, xvel, θ, θvel = state(env)

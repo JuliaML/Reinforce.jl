@@ -9,36 +9,35 @@ using Reexport
 using RecipesBase
 
 export
-	AbstractState,
-	AbstractPolicy,
-	AbstractEnvironment,
-
 	AbstractActionSet,
 	ContinuousActionSet,
 	DiscreteActionSet,
+	MultiActionSet,
 
+	AbstractEnvironment,
 	reset!,
 	step!,
-	episode!,
-	observe!,
 	reward,
-	reward!,
 	state,
-	state!,
 	actions,
+
+	AbstractPolicy,
+	RandomPolicy,
 	action,
 
-	state,
-	state!,
+	AbstractState,
 	StateVector,
 	History,
+	# state,
+	state!,
 
-	RandomPolicy
+	episode!
 
 # ----------------------------------------------------------------
 
 abstract AbstractActionSet
 
+# allow continuous value(s) in a range(s)
 immutable ContinuousActionSet{T} <: AbstractActionSet
 	  amin::T
 	  amax::T
@@ -52,8 +51,6 @@ immutable ContinuousActionSet{T} <: AbstractActionSet
 
     ContinuousActionSet{S<:Number}(amin::S, amax::S) = new(amin, amax)
 end
-
-# outer constructor to handle dispatch to above inner constructors
 ContinuousActionSet{T}(amin::T, amax::T) = ContinuousActionSet{T}(amin, amax)
 
 Base.length(aset::ContinuousActionSet) = length(aset.amin)
@@ -64,6 +61,7 @@ Base.in{T<:Number}(x::Number, aset::ContinuousActionSet{T}) = aset.amin <= x <= 
 Base.in{T<:AbstractVector}(x::AbstractVector, aset::ContinuousActionSet{T}) =
     length(x) == length(aset) && all(aset.amin .<= x .<= aset.amax)
 
+# choose from discrete actions
 immutable DiscreteActionSet{T} <: AbstractActionSet
 	actions::T
 end
@@ -72,6 +70,8 @@ Base.in(x, aset::DiscreteActionSet) = x in aset.actions
 Base.length(aset::DiscreteActionSet) = length(aset.actions)
 Base.getindex(aset::DiscreteActionSet, i::Int) = aset.actions[i]
 
+
+# several action sets of varying types
 immutable MultiActionSet{T<:Tuple} <: AbstractActionSet
     asets::T
 end
@@ -88,40 +88,83 @@ Base.in(x, aset::MultiActionSet) = all(map(in, x, aset.asets))
 # Base.length(aset::MultiActionSet) = reduce(+, 0, map(length, aset.asets))
 
 # ----------------------------------------------------------------
+# ----------------------------------------------------------------
+# Implement this interface for a new environment
 
 abstract AbstractEnvironment
-abstract AbstractState
-abstract AbstractPolicy
 
-# `r, s, A = observe!(env)` should return `(reward, state, actions)`
-# Note: most environments will not implement this directly
-function observe!(env::AbstractEnvironment)
-    reward!(env), state!(env), actions(env)
-end
+# # `r, s, A = observe!(env)` should return `(reward, state, actions)`
+# # Note: most environments will not implement this directly
+# function observe!(env::AbstractEnvironment)
+#     reward!(env), state!(env), actions(env)
+# end
 
-# `reset!(env)` resets an episode
+"""
+`reset!(env)`
+
+Reset an environment.
+"""
 function reset! end
 
 # observe and get action from policy, plus any other details.
 #	returns false when the episode is finished
+# done = step!()
+
+"""
+r, s′ = step!(env, s, a)
+
+Move the simulation forward, collecting a reward and getting the next state.
+"""
 function step! end
 
-# `r = reward!(env)` returns the current reward, optionally updating it first
-function reward end
-function reward! end
 
-# `s = state!(env)` returns the current state, optionally updating it first
-function state end
-function state! end
+# note for developers: you should also implement Base.done(env) for episodic environments
+Base.done(env::AbstractEnvironment) = false
 
-# `A = actions(env)` returns a list/set/description of valid actions
-function actions end
 
-# `a = action(policy, r, s, A)` should take in the last reward `r`, current state `s`,
-#      and set of valid actions `A`, then return an action `a`
+"""
+`A′ = actions(env, s′)`
+
+Return a list/set/description of valid actions from state `s′`.
+"""
+actions(env::AbstractEnvironment) = actions(env, state(env))
+
+
+# note for developers: you don't need to implement these if you have state/reward fields
+
+"""
+`s = state(env)`
+
+Return the current state of the environment.
+"""
+state(env::AbstractEnvironment) = env.state
+
+"""
+`r = reward(env)`
+
+Return the current reward of the environment.
+"""
+reward(env::AbstractEnvironment) = env.reward
+
+
+# ----------------------------------------------------------------
+# Implement this interface for a new policy
+
+abstract AbstractPolicy
+
+"""
+`a′ = action(policy, r, s′, A′)`
+
+Take in the last reward `r`, current state `s′`, and set of valid actions `A′ = actions(env, s′)`,
+then return the next action `a′`.
+
+Note that a policy could do a 'sarsa-style' update simply by saving the last state and action `(s,a)`.
+"""
 function action end
 
 # ----------------------------------------------------------------
+# Episode iteration
+
 
 # override these for custom functionality for your environment
 on_step(env::AbstractEnvironment, i::Int) = return
@@ -135,11 +178,15 @@ function episode!(env::AbstractEnvironment,
 	reset!(env)
 	i = 1
 	total_reward = 0.0
+	reset!(env)
+	r = reward(env)
 	while true
-		done = step!(env, policy)
+		s = state(env)
+		a = action(policy, r, s, actions(env))
+		r, s = step!(env, s, a)
 		stepfunc(env, i)
-		total_reward += reward(env)
-		if done || i > maxiter
+		total_reward += r
+		if done(env) || i > maxiter
 			break
 		end
 		i += 1
@@ -149,7 +196,7 @@ end
 
 
 # ----------------------------------------------------------------
-
+# concrete implementations
 
 include("states.jl")
 include("policy.jl")

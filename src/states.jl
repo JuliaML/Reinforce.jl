@@ -1,4 +1,8 @@
 
+abstract AbstractState
+
+# ----------------------------------------------------------------
+
 "A StateVector holds both the functions which will populate the state, and the most recent state."
 type StateVector{S} <: AbstractState
 	queries::Vector{Function}
@@ -41,3 +45,6 @@ function state!(hist::History)
 end
 
 StatsBase.nobs(hist::History) = size(hist.states, 2)
+
+
+# ----------------------------------------------------------------
