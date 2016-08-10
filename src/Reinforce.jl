@@ -5,6 +5,7 @@ module Reinforce
 
 using Reexport
 @reexport using StatsBase
+using Distributions
 @reexport using LearnBase
 using RecipesBase
 
@@ -163,6 +164,7 @@ include("states.jl")
 include("policy.jl")
 
 include("envs/cartpole.jl")
+include("envs/pendulum.jl")
 
 # ----------------------------------------------------------------
 

@@ -25,9 +25,14 @@ function CrossEntropyMethodPolicy(env::AbstractEnvironment, noise_func = t->0.0)
 	CrossEntropyMethodPolicy(zeros(n), ones(n), noise_func, cem_transformation(env, zeros(n)))
 end
 
-# our action is the action which maximizes the affine transform
-function Reinforce.action(π::CrossEntropyMethodPolicy, r, s, A)
+# discrete: our action is the action which maximizes the affine transform
+function Reinforce.action(π::CrossEntropyMethodPolicy, r, s, A::DiscreteActionSet)
 	A[indmax(transform(π.trans, s))]
+end
+
+# continuous: return the transform value
+function Reinforce.action(π::CrossEntropyMethodPolicy, r, s, A::ContinuousActionSet)
+	Transformations.sigmoid(transform(π.trans, s)[1]) * (A.amax-A.amin) + A.amin
 end
 
 # update μ and σ with the sample mean/std of the elite set
@@ -43,7 +48,7 @@ end
 # ----------------------------------------------------------------
 
 function myplot(t, hists)
-	(env,i) -> if t%5==0 && mod1(i,4)==1
+	(env,i,sars) -> if t%5==0 && mod1(i,4)==1
 		plot(env,t,i,hists)
 	else
 		return
@@ -121,11 +126,12 @@ end
 
 # construct an appropriate policy given the environment state and action space
 function cem_transformation(env, θ)
-	model_type = if typeof(actions(env)) <: DiscreteActionSet
-		Affine
-	else
-		DeterministicContinuousLinearPolicy
-	end
+	# model_type = if typeof(actions(env)) <: DiscreteActionSet
+	# 	Affine
+	# else
+	# 	DeterministicContinuousLinearPolicy
+	# end
+	model_type = Affine
 
 	nS = length(state(env))
 	nA = length(actions(env))

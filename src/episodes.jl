@@ -37,7 +37,7 @@ end
 
 
 # TODO: replace this with something better
-function episode!(env, policy; stepfunc = on_step, kw...)
+function episode!(env, policy = RandomPolicy(); stepfunc = on_step, kw...)
 	ep = Episode(env, policy; kw...)
 	for sars in ep
 		stepfunc(env, ep.niter, sars)
