@@ -2,7 +2,7 @@
 # ----------------------------------------------------------------
 # Episode iteration
 
-immutable Episode{E<:AbstractEnvironment,P<:AbstractPolicy}
+type Episode{E<:AbstractEnvironment,P<:AbstractPolicy}
     env::E
     policy::P
     total_reward::Float64
@@ -15,7 +15,7 @@ function Episode(env::AbstractEnvironment, policy::AbstractPolicy; maxiter=typem
 end
 
 function Base.start(ep::Episode)
-	reset!(env)
+	reset!(ep.env)
 	ep.total_reward = 0.0
 	ep.niter = 1
 end
@@ -25,11 +25,12 @@ function Base.done(ep::Episode, i)
 end
 
 function Base.next(ep::Episode, i)
-	s = state(ep.env)
-	a = action(ep.policy, reward(env), s, actions(ep.env))
-	check_constraints(ep.env, s, a)
-	r, s′ = step!(ep.env, s, a)
-	total_reward += r
+	env = ep.env
+	s = state(env)
+	a = action(ep.policy, reward(env), s, actions(env))
+	check_constraints(env, s, a)
+	r, s′ = step!(env, s, a)
+	ep.total_reward += r
 	ep.niter = i + 1
 	(s, a, r, s′), i+1
 end
@@ -38,15 +39,15 @@ end
 # TODO: replace this with something better
 function episode!(env, policy; stepfunc = on_step, kw...)
 	ep = Episode(env, policy; kw...)
-	for (i, sars) in enumerate(ep)
-		stepfunc(env, i)
+	for sars in ep
+		stepfunc(env, ep.niter, sars)
 	end
 	ep.total_reward, ep.niter
 end
 
 
 # # override these for custom functionality for your environment
-# on_step(env::AbstractEnvironment, i::Int) = return
+on_step(env::AbstractEnvironment, i::Int, sars) = return
 check_constraints(env::AbstractEnvironment, s, a) = return
 
 # # run a single episode. by default, it will run until `step!` returns false
