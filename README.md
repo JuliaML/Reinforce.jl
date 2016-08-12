@@ -1,3 +1,56 @@
-# Reinforce (WIP -- not ready for public consumption)
+# Reinforce (WIP)
 
 [![Gitter](https://badges.gitter.im/reinforcejl/Lobby.svg)](https://gitter.im/reinforcejl/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
+Reinforce.jl is an interface for Reinforcement Learning.  It is intended to simply connect modular environments, agents, and solvers with a simple interface.
+
+---
+
+Packages which build on Reinforce:
+
+- [AtariAlgos](https://github.com/tbreloff/AtariAlgos.jl): Environment which wraps Atari games using [ArcadeLearningEnvironment](https://github.com/nowozin/ArcadeLearningEnvironment.jl)
+
+---
+
+New environments are created by subtyping `AbstractEnvironment` and implementing a few methods:
+
+- `reset!(env)`
+- `step!(env, s, a) --> r, s′`
+- `done(env)`
+- `actions(env, s) --> A`
+
+and optional overrides:
+
+- `state(env) --> s`
+- `reward(env) --> r`
+
+which map to `env.state` and `env.reward` respectively when unset.
+
+# TODO: more details and examples
+
+---
+
+Agents/policies are created by subtyping `AbstractPolicy` and implementing `action`.  The built-in random policy is a short example:
+
+```julia
+type RandomPolicy <: AbstractPolicy end
+action(policy::RandomPolicy, r, s′, A′) = rand(A′)
+```
+
+The `action` method maps the last reward and current state to the next chosen action: `(r, s′) --> a′`.
+
+---
+
+Iterate through episodes using the `Episode` iterator.  The convenience method `episode!` demonstrates this:
+
+```julia
+function episode!(env, policy = RandomPolicy(); stepfunc = on_step, kw...)
+	ep = Episode(env, policy; kw...)
+	for sars in ep
+		stepfunc(env, ep.niter, sars)
+	end
+	ep.total_reward, ep.niter
+end
+```
+
+A 4-tuple `(s,a,r,s′)` is returned from each iteration.  Whether this is `r` or `r′` is a matter of convention.
