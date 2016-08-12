@@ -2,7 +2,7 @@
 
 [![Gitter](https://badges.gitter.im/reinforcejl/Lobby.svg)](https://gitter.im/reinforcejl/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-Reinforce.jl is an interface for Reinforcement Learning.  It is intended to simply connect modular environments, agents, and solvers with a simple interface.
+Reinforce.jl is an interface for Reinforcement Learning.  It is intended to connect modular environments, policies, and solvers with a simple interface.
 
 ---
 
@@ -26,7 +26,7 @@ and optional overrides:
 
 which map to `env.state` and `env.reward` respectively when unset.
 
-# TODO: more details and examples
+TODO: more details and examples
 
 ---
 
@@ -53,4 +53,4 @@ function episode!(env, policy = RandomPolicy(); stepfunc = on_step, kw...)
 end
 ```
 
-A 4-tuple `(s,a,r,s′)` is returned from each iteration.  Whether this is `r` or `r′` is a matter of convention.
+A 4-tuple `(s,a,r,s′)` is returned from each step of the episode.  Whether we write `r` or `r′` is a matter of convention.
