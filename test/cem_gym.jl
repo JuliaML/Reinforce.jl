@@ -13,109 +13,25 @@ using Plots; gr(size=(500,200))
 
 # ----------------------------------------------------------------
 
-type CrossEntropyMethodPolicy <: AbstractPolicy
-	μ::Vector{Float64}
-	σ::Vector{Float64}
-	noise_func::Function # additional deviation at each timestep
-	trans  # the transformation, updated at each iteration
-end
-
-function CrossEntropyMethodPolicy(env::AbstractEnvironment, noise_func = t->0.0)
-	n = (length(state(env)) + 1) * length(actions(env))
-	CrossEntropyMethodPolicy(zeros(n), ones(n), noise_func, cem_transformation(env, zeros(n)))
+"""
+Wraps a LearnBase.Transformation which converts an input vector to action values.
+For discrete actions, it chooses the action which produces the highest value.
+For continuous (interval) actions, it squashes actions to [0,1].
+"""
+immutable TransformPolicy{T} <: AbstractPolicy
+	trans::T
 end
 
 # discrete: our action is the action which maximizes the affine transform
-function Reinforce.action(π::CrossEntropyMethodPolicy, r, s, A::DiscreteSet)
+function Reinforce.action(π::TransformPolicy, r, s, A::DiscreteSet)
 	A[indmax(transform(π.trans, s))]
 end
 
-# continuous: return the transform value
-function Reinforce.action(π::CrossEntropyMethodPolicy, r, s, A::IntervalSet)
+# continuous: return the transform value, squashed to [0,1]
+# TODO: remove the squashing when a "Affine + Sigmoid" transformation is available
+function Reinforce.action(π::TransformPolicy, r, s, A::IntervalSet)
 	Transformations.sigmoid(transform(π.trans, s)[1]) * (A.amax-A.amin) + A.amin
 end
-
-# update μ and σ with the sample mean/std of the elite set
-function LearnBase.learn!(π::CrossEntropyMethodPolicy, elite_θs, t)
-	for j=1:length(π.μ)
-		θj = [θ[j] for θ in elite_θs]
-		π.μ[j] = mean(θj)
-		π.σ[j] = std(θj) + π.noise_func(t)
-	end
-end
-
-
-# ----------------------------------------------------------------
-
-function myplot(t, hists, anim)
-	(env,i,sars) -> if mod1(t,3)==1 && mod1(i,10)==1
-		plot(env,t,i,hists)
-		frame(anim)
-	else
-		return
-	end
-end
-
-
-
-function LearnBase.learn!(π::CrossEntropyMethodPolicy, env::AbstractEnvironment;
-			maxiter = 200,
-			cem_iter = 100,
-			cem_batch_size = 20,
-			cem_elite_frac = 0.2,
-			# stopping_reward_std = 1e-2,
-			stopping_norm = 1e-2)
-
-	# this is a mappable function of θ to reward
-	function cem_episode(θ; kw...)
-		π.trans = cem_transformation(env, θ)
-		R, T = episode!(env, π; maxiter = maxiter, kw...)
-		R
-	end
-	anim = Animation()
-
-	n_elite = round(Int, cem_batch_size * cem_elite_frac)
-	last_μ = copy(π.μ)
-	hist_min, hist_mean, hist_max = zeros(0),zeros(0),zeros(0)
-	for t=1:cem_iter
-		# sample thetas from a multivariate normal distribution
-		N = MultivariateNormal(π.μ, π.σ)
-		θs = [rand(N) for k=1:cem_batch_size]
-
-		# compute rewards and pick out an elite set
-		Rs = map(cem_episode, θs)
-		elite_indices = sortperm(Rs, rev=true)[1:n_elite]
-		elite_θs = θs[elite_indices]
-		info("Iteration $t. mean(R): $(mean(Rs)) max(R): $(maximum(Rs))")
-
-		push!(hist_min, minimum(Rs))
-		push!(hist_mean, mean(Rs))
-		push!(hist_max, maximum(Rs))
-
-		# update the policy from the elite set
-		learn!(π, elite_θs, t)
-		@show π.μ π.σ
-
-		# finish the iteration by evaluating an episode with θ = μ
-		R = cem_episode(π.μ, stepfunc = myplot(t, (hist_min,hist_mean,hist_max), anim))
-		info("Episode $t finished. Total reward: $R")
-
-		# have we converged?
-		# stdRs = std(Rs)
-		# if stdRs < stopping_reward_std
-		normdiff = norm(π.μ - last_μ)
-		@show normdiff
-		if normdiff < stopping_norm
-			info("Converged after $(t*cem_batch_size) episodes.")
-			break
-		end
-		last_μ = copy(π.μ)
-	end
-	gif(anim)
-end
-
-
-# ----------------------------------------------------------------
 
 # given a (n*m)-length vector θ, split into a matrix and vector
 function split_θ(θ, n, m)
@@ -128,23 +44,136 @@ end
 
 
 # construct an appropriate policy given the environment state and action space
-function cem_transformation(env, θ)
-	# model_type = if typeof(actions(env)) <: DiscreteSet
-	# 	Affine
-	# else
-	# 	DeterministicContinuousLinearPolicy
-	# end
+function cem_policy(env, θ)
 	model_type = Affine
-
 	nS = length(state(env))
 	nA = length(actions(env))
 	w, b = split_θ(θ, nS+1, nA)
 
-	# create a Transformations.Transformation
-	transformation(model_type(w, b))
+	# create a Transformations.Transformation, and wrap it in the policy
+	trans = transformation(model_type(w, b))
+	TransformPolicy(trans)
 end
 
 # ----------------------------------------------------------------
+
+"""
+The Cross Entropy Method is a simple but useful optimization method without a need
+for gradients or differentiability.
+"""
+type CrossEntropyMethod
+	μ::Vector{Float64}
+	σ::Vector{Float64}
+	Z::Vector{Float64}  # extra variance
+	noise_func::Function # additional deviation at each timestep
+	options::KW
+end
+
+function CrossEntropyMethod(n::Integer, noise_func = t->0.0; kw...)
+	options = merge(default_options(CrossEntropyMethod), KW(kw))
+	CrossEntropyMethod(zeros(n), ones(n), zeros(n), noise_func, options)
+end
+
+default_options(::Type{CrossEntropyMethod}) = KW(
+		:maxiter => 200,
+		:cem_iter => 100,
+		:cem_batch_size => 20,
+		:cem_elite_frac => 0.2,
+		:stopping_norm => 1e-2,
+	)
+
+# ----------------------------------------------------------------
+
+function LearnBase.learn!(solver::CrossEntropyMethod, env::AbstractEnvironment, doanim = false)
+	
+	# !!! INIT:
+
+	# this is a mappable function of θ to reward
+	cem_episode = θ -> begin
+		π = cem_policy(env, θ)
+		R, T = episode!(env, π; maxiter = solver.options[:maxiter])
+		R
+	end
+	anim = doanim ? Animation() : nothing
+	n_elite = round(Int, solver.options[:cem_batch_size] * solver.options[:cem_elite_frac])
+	# last_μ = copy(solver.μ)
+	last_μ = similar(solver.μ)
+	hist_min, hist_mean, hist_max = zeros(0),zeros(0),zeros(0)
+
+
+	for t=1:solver.options[:cem_iter]
+		# !!! UPDATE:
+
+		last_μ = copy(solver.μ)
+
+		# sample thetas from a multivariate normal distribution
+		N = MultivariateNormal(solver.μ, solver.σ)
+		θs = [rand(N) for k=1:solver.options[:cem_batch_size]]
+
+		# compute rewards and pick out an elite set
+		Rs = map(cem_episode, θs)
+		elite_indices = sortperm(Rs, rev=true)[1:n_elite]
+		elite_θs = θs[elite_indices]
+		info("Iteration $t. mean(R): $(mean(Rs)) max(R): $(maximum(Rs))")
+
+
+		# update the policy from the elite set
+		for j=1:length(solver.μ)
+			θj = [θ[j] for θ in elite_θs]
+			solver.μ[j] = mean(θj)
+			solver.Z[j] = solver.noise_func(t)
+			solver.σ[j] = sqrt(var(θj) + solver.Z[j])
+		end
+		@show solver.μ solver.σ solver.Z
+
+		# !!! TRACE:
+
+		push!(hist_min, minimum(Rs))
+		push!(hist_mean, mean(Rs))
+		push!(hist_max, maximum(Rs))
+
+		# finish the iteration by evaluating an episode with θ = μ
+		R, T = episode!(
+			env,
+			cem_policy(env, solver.μ),
+			maxiter = solver.options[:maxiter],
+			stepfunc = myplot(t, hist_min, hist_mean, hist_max, anim)
+		)
+		info("Iteration $t finished. Total reward: $R")
+
+		# !!! CONVERGENCE:
+
+		normdiff = norm(solver.μ - last_μ)
+		@show normdiff
+		if normdiff < solver.options[:stopping_norm]
+			info("Converged after $(t*solver.options[:cem_batch_size]) episodes.")
+			break
+		end
+	end
+
+	doanim && gif(anim)
+end
+
+# ----------------------------------------------------------------
+
+function myplot(t, hist_min, hist_mean, hist_max, anim=nothing)
+	(env,i,sars) -> if mod1(t,3)==1 && mod1(i,10)==1
+		plot(
+			plot(hist_mean, c=:black, fill=((hist_min,hist_max), 0.2), title="Progress", leg=false),
+			plot(env, title = "Episode: $t  Iter: $i")
+		)
+		if anim == nothing
+			gui()
+		else
+			frame(anim)
+		end
+	else
+		return
+	end
+end
+
+# ----------------------------------------------------------------
+
 
 # initialize a policy, do the learning, then return the policy
 function do_cem_test(; env = GymEnv("CartPole-v0"),
@@ -152,9 +181,10 @@ function do_cem_test(; env = GymEnv("CartPole-v0"),
 					   noise_steps = 20,
 					   noise_func = t -> max(noise_max - t/noise_steps, 0.0),
 					   kw...)
-	π = CrossEntropyMethodPolicy(env, noise_func)
-	learn!(π, env; kw...)
-	π
+	n = (length(state(env)) + 1) * length(actions(env))
+	solver = CrossEntropyMethod(n, noise_func; kw...)
+	learn!(solver, env)
+	solver
 end
 
 

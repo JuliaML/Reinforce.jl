@@ -56,11 +56,12 @@ actions(env::Pendulum, s) = IntervalSet(-max_torque, max_torque)
 
 # ------------------------------------------------------------------------
 
-@recipe function f(env::Pendulum, t, iter, hists)
-	@eval import Plots
-	subplot := 2
-	layout := 2
+@recipe function f(env::Pendulum)
 	legend := false
+    xlims := (-1,1)
+    ylims := (-1,1)
+    grid := false
+    ticks := nothing
 
 	# pole
 	@series begin
@@ -78,46 +79,7 @@ actions(env::Pendulum, s) = IntervalSet(-max_torque, max_torque)
 		seriestype := :scatter
 		markersize := 10
 		markercolor := :black
-		xlims := (-1,1)
-		ylims := (-1,1)
-		grid := false
-		ticks := nothing
 		annotations := [(0, -0.2, Plots.text("a: $(env.a)", :top))]
 		[0],[0]
-	end
-
-	# # pole
-	# @series begin
-	# 	linecolor := :red
-	# 	linewidth := 10
-	# 	[x, x + 2pole_length * sin(θ)], [0.0, 2pole_length * cos(θ)]
-	# end
-
-	# # cart
-	# @series begin
-	# 	seriescolor := :black
-	# 	seriestype := :shape
-	# 	hw = 0.2pole_length
-	# 	xlims := (-x_threshold, x_threshold)
-	# 	ylims := (-Inf, 2pole_length)
-	# 	grid := false
-	# 	ticks := nothing
-	# 	if iter > 0
-	# 		title := "Episode: $t  Iter: $iter"
-	# 	end
-	# 	hw = 0.5
-	# 	l, r = x-hw, x+hw
-	# 	t, b = 0.0, -0.1
-	# 	[l, r, r, l], [t, t, b, b]
-	# end
-
-	subplot := 1
-	title := "Progress"
-	@series begin
-		linecolor := :black
-		fillrange := (hists[1], hists[3])
-		fillcolor := :black
-		fillalpha := 0.2
-		hists[2]
 	end
 end
