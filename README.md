@@ -1,5 +1,6 @@
 # Reinforce (WIP)
 
+[![Build Status](https://travis-ci.org/tbreloff/Reinforce.jl.svg?branch=master)](https://travis-ci.org/tbreloff/Reinforce.jl)
 [![Gitter](https://badges.gitter.im/reinforcejl/Lobby.svg)](https://gitter.im/reinforcejl/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 Reinforce.jl is an interface for Reinforcement Learning.  It is intended to connect modular environments, policies, and solvers with a simple interface.
