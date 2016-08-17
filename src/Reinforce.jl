@@ -10,11 +10,6 @@ using Distributions
 using RecipesBase
 
 export
-	AbstractActionSet,
-	ContinuousActionSet,
-	DiscreteActionSet,
-	MultiActionSet,
-
 	AbstractEnvironment,
 	reset!,
 	step!,
@@ -29,7 +24,6 @@ export
 	AbstractState,
 	StateVector,
 	History,
-	# state,
 	state!,
 
 	Episode,
@@ -37,59 +31,13 @@ export
 
 # ----------------------------------------------------------------
 
-abstract AbstractActionSet
-
-# allow continuous value(s) in a range(s)
-immutable ContinuousActionSet{T} <: AbstractActionSet
-	  amin::T
-	  amax::T
-
-    function ContinuousActionSet{S<:AbstractVector}(amin::S, amax::S)
-        if !(length(amin) == length(amax))
-            error("For multi-valued continuous action sets, min and max value must have same length")
-        end
-        new(amin, amax)
-    end
-
-    ContinuousActionSet{S<:Number}(amin::S, amax::S) = new(amin, amax)
-end
-ContinuousActionSet{T}(amin::T, amax::T) = ContinuousActionSet{T}(amin, amax)
-
-Base.length(aset::ContinuousActionSet) = length(aset.amin)
-Base.rand{T<:Number}(aset::ContinuousActionSet{T}) = rand() * (aset.amax - aset.amin) + aset.amin
-Base.rand{T<:AbstractVector}(aset::ContinuousActionSet{T}) = rand(length(aset)) .* (aset.amax - aset.amin) + aset.amin
-
-Base.in{T<:Number}(x::Number, aset::ContinuousActionSet{T}) = aset.amin <= x <= aset.amax
-Base.in{T<:AbstractVector}(x::AbstractVector, aset::ContinuousActionSet{T}) =
-    length(x) == length(aset) && all(aset.amin .<= x .<= aset.amax)
-
-# choose from discrete actions
-immutable DiscreteActionSet{T} <: AbstractActionSet
-	actions::T
-end
-Base.rand(aset::DiscreteActionSet) = rand(aset.actions)
-Base.in(x, aset::DiscreteActionSet) = x in aset.actions
-Base.length(aset::DiscreteActionSet) = length(aset.actions)
-Base.getindex(aset::DiscreteActionSet, i::Int) = aset.actions[i]
+# NOTE: action sets are now implemented through LearnBase:
+    # AbstractSet,
+    #     IntervalSet,
+    #     DiscreteSet,
+    #     TupleSet,
 
 
-# several action sets of varying types
-immutable MultiActionSet{T<:Tuple} <: AbstractActionSet
-    asets::T
-end
-
-MultiActionSet(asets::AbstractActionSet...) = MultiActionSet(asets)
-
-Base.rand(::Type{Vector}, aset::MultiActionSet) = [rand(i) for i in aset.asets]
-Base.rand(::Type{Tuple}, aset::MultiActionSet) = ntuple(i->rand(aset.asets[i]), length(aset.asets))
-Base.rand(aset::MultiActionSet) = rand(Vector, aset)
-
-Base.in(x, aset::MultiActionSet) = all(map(in, x, aset.asets))
-
-# semantics for this one aren't very clear, so skip it for now
-# Base.length(aset::MultiActionSet) = reduce(+, 0, map(length, aset.asets))
-
-# ----------------------------------------------------------------
 # ----------------------------------------------------------------
 # Implement this interface for a new environment
 

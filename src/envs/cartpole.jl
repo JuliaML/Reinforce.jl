@@ -51,7 +51,7 @@ function Base.done(env::CartPole)
 	  -θ_threshold <= θ <= θ_threshold)
 end
 
-actions(env::CartPole, s) = DiscreteActionSet(1:2)
+actions(env::CartPole, s) = DiscreteSet(1:2)
 
 # ------------------------------------------------------------------------
 

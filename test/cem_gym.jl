@@ -9,7 +9,7 @@ using Distributions
 using Transformations
 
 # ENV["GKS_DOUBLE_BUF"] = "true"
-using Plots; gr(show=true, size=(600,300))
+using Plots; gr(size=(500,200))
 
 # ----------------------------------------------------------------
 
@@ -26,12 +26,12 @@ function CrossEntropyMethodPolicy(env::AbstractEnvironment, noise_func = t->0.0)
 end
 
 # discrete: our action is the action which maximizes the affine transform
-function Reinforce.action(π::CrossEntropyMethodPolicy, r, s, A::DiscreteActionSet)
+function Reinforce.action(π::CrossEntropyMethodPolicy, r, s, A::DiscreteSet)
 	A[indmax(transform(π.trans, s))]
 end
 
 # continuous: return the transform value
-function Reinforce.action(π::CrossEntropyMethodPolicy, r, s, A::ContinuousActionSet)
+function Reinforce.action(π::CrossEntropyMethodPolicy, r, s, A::IntervalSet)
 	Transformations.sigmoid(transform(π.trans, s)[1]) * (A.amax-A.amin) + A.amin
 end
 
@@ -47,9 +47,10 @@ end
 
 # ----------------------------------------------------------------
 
-function myplot(t, hists)
-	(env,i,sars) -> if t%5==0 && mod1(i,4)==1
+function myplot(t, hists, anim)
+	(env,i,sars) -> if mod1(t,3)==1 && mod1(i,10)==1
 		plot(env,t,i,hists)
+		frame(anim)
 	else
 		return
 	end
@@ -71,6 +72,7 @@ function LearnBase.learn!(π::CrossEntropyMethodPolicy, env::AbstractEnvironment
 		R, T = episode!(env, π; maxiter = maxiter, kw...)
 		R
 	end
+	anim = Animation()
 
 	n_elite = round(Int, cem_batch_size * cem_elite_frac)
 	last_μ = copy(π.μ)
@@ -95,7 +97,7 @@ function LearnBase.learn!(π::CrossEntropyMethodPolicy, env::AbstractEnvironment
 		@show π.μ π.σ
 
 		# finish the iteration by evaluating an episode with θ = μ
-		R = cem_episode(π.μ, stepfunc = myplot(t, (hist_min,hist_mean,hist_max)))
+		R = cem_episode(π.μ, stepfunc = myplot(t, (hist_min,hist_mean,hist_max), anim))
 		info("Episode $t finished. Total reward: $R")
 
 		# have we converged?
@@ -109,6 +111,7 @@ function LearnBase.learn!(π::CrossEntropyMethodPolicy, env::AbstractEnvironment
 		end
 		last_μ = copy(π.μ)
 	end
+	gif(anim)
 end
 
 
@@ -126,7 +129,7 @@ end
 
 # construct an appropriate policy given the environment state and action space
 function cem_transformation(env, θ)
-	# model_type = if typeof(actions(env)) <: DiscreteActionSet
+	# model_type = if typeof(actions(env)) <: DiscreteSet
 	# 	Affine
 	# else
 	# 	DeterministicContinuousLinearPolicy

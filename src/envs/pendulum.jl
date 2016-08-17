@@ -52,7 +52,7 @@ function state(env::Pendulum)
 end
 
 Base.done(env::Pendulum) = env.steps >= env.maxsteps
-actions(env::Pendulum, s) = ContinuousActionSet(-max_torque, max_torque)
+actions(env::Pendulum, s) = IntervalSet(-max_torque, max_torque)
 
 # ------------------------------------------------------------------------
 
