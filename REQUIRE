@@ -4,3 +4,5 @@ Reexport
 StatsBase
 Distributions
 RecipesBase
+IterationManagers
+Parameters
