@@ -6,7 +6,6 @@ export
 @with_kw type CrossEntropyMethod <: IM.IterationManager
     f::Function # maps θ --> r
     noise_func::Function = t->0.0 # additional deviation at each timestep
-    maxiter::Int = 200
     cem_iter::Int = 100
     cem_batchsize::Int = 20
     cem_elitefrac::Float64 = 0.2
@@ -17,7 +16,7 @@ export
 end
 CrossEntropyMethod(f::Function; kw...) = CrossEntropyMethod(; f=f, kw...)
 
-@with_kw type CrossEntropyMethodState <: IM.InterationState
+@with_kw type CrossEntropyMethodState <: IM.IterationState
     n::Int
     t::Int = 0
     μ::Vector{Float64} = zeros(n)
@@ -25,7 +24,7 @@ CrossEntropyMethod(f::Function; kw...) = CrossEntropyMethod(; f=f, kw...)
     σ::Vector{Float64} = ones(n)
     Z::Vector{Float64} = zeros(n) # extra variance
     anim = nothing
-    h::MVHistory = MVHistory()
+    hist::MVHistory = MVHistory()
 end
    
 # do something before the iterations start 
@@ -47,13 +46,13 @@ function IM.update!(mgr::CrossEntropyMethod, istate::CrossEntropyMethodState)
     n_elite = round(Int, mgr.cem_batchsize * mgr.cem_elitefrac)
     elite_indices = sortperm(Rs, rev=true)[1:n_elite]
     elite_θs = θs[elite_indices]
-    info("Iteration $t. mean(R): $(mean(Rs)) max(R): $(maximum(Rs))")
+    info("Iteration $(istate.t). mean(R): $(mean(Rs)) max(R): $(maximum(Rs))")
 
     # update the policy from the elite set
     for j=1:length(istate.μ)
         θj = [θ[j] for θ in elite_θs]
         istate.μ[j] = mean(θj)
-        istate.Z[j] = mgr.noise_func(t)
+        istate.Z[j] = mgr.noise_func(istate.t)
         istate.σ[j] = sqrt(var(θj) + istate.Z[j])
     end
     @show istate.μ istate.σ istate.Z
@@ -62,8 +61,12 @@ function IM.update!(mgr::CrossEntropyMethod, istate::CrossEntropyMethodState)
         hist_min = minimum(Rs)
         hist_mean = mean(Rs)
         hist_max = maximum(Rs)
-        @trace istate.t hist_min hist_mean hist_max
+        @trace istate.hist istate.t hist_min hist_mean hist_max
     end
+
+    # if mgr.doplot
+    #     mgr.f(rand(N), true)
+    # end
 end
 
 # do something for each iteration, but after update! has finished
@@ -83,6 +86,7 @@ end
 
 # are we done iterating?  check for convergence, etc
 function IM.finished(mgr::CrossEntropyMethod, istate::CrossEntropyMethodState)
+    istate.t > 0 || return false
     normdiff = norm(istate.μ - istate.last_μ)
     if normdiff < mgr.stopping_norm
         info("Converged after $(istate.t * mgr.cem_batchsize) episodes.")

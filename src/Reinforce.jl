@@ -112,6 +112,7 @@ function action end
 include("episodes.jl")
 include("states.jl")
 include("policy.jl")
+include("solvers.jl")
 
 include("envs/cartpole.jl")
 include("envs/pendulum.jl")

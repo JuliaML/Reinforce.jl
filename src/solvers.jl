@@ -1,5 +1,5 @@
 
-using IterationManagers
+import IterationManagers
 const IM = IterationManagers
 using Parameters
 
@@ -24,15 +24,19 @@ using Parameters
 
 # TODO: add this to IM
 function IM.managed_iteration!(mgr::IM.IterationManager, istate::IM.IterationState)
-    pre_hook(mgr, istate)
+    IM.pre_hook(mgr, istate)
 
-    while !(finished(mgr, istate))
-        update!(mgr, istate)
-        iter_hook(mgr, istate)
+    while !(IM.finished(mgr, istate))
+        IM.update!(mgr, istate)
+        IM.iter_hook(mgr, istate)
     end
 
-    post_hook(mgr, istate)
+    IM.post_hook(mgr, istate)
     istate
+end
+
+function LearnBase.learn!(mgr::IM.IterationManager, istate::IM.IterationState)
+    IM.managed_iteration!(mgr, istate)
 end
 
 include("solvers/cem.jl")
