@@ -8,6 +8,7 @@ using Reexport
 using Distributions
 @reexport using LearnBase
 using RecipesBase
+using ValueHistories
 
 export
 	AbstractEnvironment,
