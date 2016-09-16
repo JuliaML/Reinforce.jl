@@ -13,15 +13,16 @@ Reinforce.jl is an interface for Reinforcement Learning.  It is intended to conn
 Packages which build on Reinforce:
 
 - [AtariAlgos](https://github.com/tbreloff/AtariAlgos.jl): Environment which wraps Atari games using [ArcadeLearningEnvironment](https://github.com/nowozin/ArcadeLearningEnvironment.jl)
+- [OpenAIGym](https://github.com/tbreloff/OpenAIGym.jl): Wrapper for OpenAI's python package: gym
 
 ---
 
 New environments are created by subtyping `AbstractEnvironment` and implementing a few methods:
 
 - `reset!(env)`
-- `step!(env, s, a) --> r, s′`
-- `done(env)`
 - `actions(env, s) --> A`
+- `step!(env, s, a) --> r, s′`
+- `finished(env, s′)`
 
 and optional overrides:
 

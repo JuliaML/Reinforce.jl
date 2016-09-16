@@ -24,34 +24,34 @@ end
 CartPole() = CartPole(0.1rand(4)-0.05, 0.0)
 
 reset!(env::CartPole)  = (env.state = 0.1rand(4)-0.05; env.reward = 0.0; return)
+actions(env::CartPole, s) = DiscreteSet(1:2)
 
 function step!(env::CartPole, s, a)
 	s = state(env)
 	x, xvel, θ, θvel = s
-	
+
 	force = (a == 1 ? -1 : 1) * force_mag
 	tmp = (force + mass_pole_length * sin(θ) * (θvel^2)) / total_mass
 	θacc = (gravity * sin(θ) - tmp * cos(θ)) /
 			(pole_length * (4/3 - mass_pole * (cos(θ)^2) / total_mass))
 	xacc = tmp - mass_pole_length * θacc * cos(θ) / total_mass
-	
+
 	# update state
 	s[1] = x    += τ * xvel
 	s[2] = xvel += τ * xacc
 	s[3] = θ    += τ * θvel
 	s[4] = θvel += τ * θacc
 
-	env.reward = done(env) ? 0.0 : 1.0
+	env.reward = finished(env, s) ? 0.0 : 1.0
 	env.reward, s
 end
 
-function Base.done(env::CartPole)
-	x, xvel, θ, θvel = state(env)
+function finished(env::CartPole, s′)
+	x, xvel, θ, θvel = s′
 	!(-x_threshold <= x <= x_threshold &&
 	  -θ_threshold <= θ <= θ_threshold)
 end
 
-actions(env::CartPole, s) = DiscreteSet(1:2)
 
 # ------------------------------------------------------------------------
 

@@ -24,13 +24,15 @@ function reset!(env::Pendulum)
 	return
 end
 
+actions(env::Pendulum, s) = IntervalSet(-max_torque, max_torque)
+
 function step!(env::Pendulum, s, a)
 	θ, θvel = env.θs
 	g = 10.0
 	m = 1.0
 	l = 1.0
 	dt = 0.05
-	
+
 	env.a = a
 	a = clamp(a, -max_torque, max_torque)
 	env.reward = -(angle_normalize(θ)^2 + 0.1θvel^2 + 0.001a^2)
@@ -51,8 +53,7 @@ function state(env::Pendulum)
 	Float64[cos(θ), sin(θ), θvel]
 end
 
-Base.done(env::Pendulum) = env.steps >= env.maxsteps
-actions(env::Pendulum, s) = IntervalSet(-max_torque, max_torque)
+finished(env::Pendulum, s′) = env.steps >= env.maxsteps
 
 # ------------------------------------------------------------------------
 

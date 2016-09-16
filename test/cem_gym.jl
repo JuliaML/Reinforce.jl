@@ -22,9 +22,11 @@ immutable TransformPolicy{T} <: AbstractPolicy
 	trans::T
 end
 
+
+
 # discrete: our action is the action which maximizes the affine transform
 function Reinforce.action(π::TransformPolicy, r, s, A::DiscreteSet)
-	A[indmax(transform(π.trans, s))]
+	A[indmax(transform!(π.trans, s))]
 end
 
 # continuous: return the transform value, squashed to [0,1]
@@ -45,14 +47,16 @@ end
 
 # construct an appropriate policy given the environment state and action space
 function cem_policy(env, θ)
-	model_type = Affine
-	nS = length(state(env))
-	nA = length(actions(env))
-	w, b = split_θ(θ, nS+1, nA)
-
-	# create a Transformations.Transformation, and wrap it in the policy
-	trans = transformation(model_type(w, b))
-	TransformPolicy(trans)
+	# model_type = Affine
+    s = state(env)
+	nS = length(s)
+    A = actions(env,s)
+    @assert isa(A, DiscreteSet) # this is the only kind that will work right now
+	nA = length(A)
+    # model = Chain(Affine(nS, 1), Activation(:sigmoid,1))
+    model = Affine(nS, nA)
+    # w, b = model.params.views
+	TransformPolicy(model)
 end
 
 # ----------------------------------------------------------------
@@ -84,8 +88,8 @@ end
 
 # ----------------------------------------------------------------
 
-# function LearnBase.learn!(mgr::CrossEntropyMethod, env::AbstractEnvironment, doanim = false) 
-	
+# function LearnBase.learn!(mgr::CrossEntropyMethod, env::AbstractEnvironment, doanim = false)
+
 	# !!! INIT:
 
 	# # this is a mappable function of θ to reward
@@ -189,7 +193,8 @@ function do_cem_test(; env = GymEnv("CartPole-v0"),
         R
     end
     mgr = CrossEntropyMethod(f; kw...)
-    istate = CrossEntropyMethodState(n = (length(state(env)) + 1) * length(actions(env)))
+    s = state(env)
+    istate = CrossEntropyMethodState(n = (length(s) + 1) * length(actions(env,s)))
     learn!(mgr, istate)
     @show istate
 	# solver = CrossEntropyMethod(n, noise_func; kw...)

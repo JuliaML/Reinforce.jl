@@ -21,14 +21,16 @@ function Base.start(ep::Episode)
 end
 
 function Base.done(ep::Episode, i)
-	done(ep.env) || i >= ep.maxiter
+	finished(ep.env, state(ep.env)) || i >= ep.maxiter
 end
 
 function Base.next(ep::Episode, i)
 	env = ep.env
 	s = state(env)
-	a = action(ep.policy, reward(env), s, actions(env))
-	check_constraints(env, s, a)
+    A = actions(env, s)
+    r = reward(env)
+	a = action(ep.policy, r, s, A)
+    @assert a in A
 	r, s′ = step!(env, s, a)
 	ep.total_reward += r
 	ep.niter = i + 1
@@ -48,7 +50,7 @@ end
 
 # # override these for custom functionality for your environment
 on_step(env::AbstractEnvironment, i::Int, sars) = return
-check_constraints(env::AbstractEnvironment, s, a) = return
+# check_constraints(env::AbstractEnvironment, s, a) = return
 
 # # run a single episode. by default, it will run until `step!` returns false
 # function episode!(env::AbstractEnvironment,
@@ -73,4 +75,3 @@ check_constraints(env::AbstractEnvironment, s, a) = return
 # 	end
 # 	total_reward, i
 # end
-

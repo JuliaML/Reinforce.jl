@@ -62,7 +62,7 @@ function step! end
 
 
 # note for developers: you should also implement Base.done(env) for episodic environments
-Base.done(env::AbstractEnvironment) = false
+finished(env::AbstractEnvironment, s′) = false
 
 
 """
@@ -70,7 +70,8 @@ Base.done(env::AbstractEnvironment) = false
 
 Return a list/set/description of valid actions from state `s′`.
 """
-actions(env::AbstractEnvironment) = actions(env, state(env))
+# actions(env::AbstractEnvironment) = actions(env, state(env))
+function actions end
 
 
 # note for developers: you don't need to implement these if you have state/reward fields
