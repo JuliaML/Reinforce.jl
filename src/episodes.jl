@@ -7,11 +7,11 @@ type Episode{E<:AbstractEnvironment,P<:AbstractPolicy}
     policy::P
     total_reward::Float64
     niter::Int
-    maxiter::Int
+    maxsteps::Int
 end
 
-function Episode(env::AbstractEnvironment, policy::AbstractPolicy; maxiter=typemax(Int))
-	Episode(env, policy, 0.0, 0, maxiter)
+function Episode(env::AbstractEnvironment, policy::AbstractPolicy; maxsteps=typemax(Int))
+	Episode(env, policy, 0.0, 0, maxsteps)
 end
 
 function Base.start(ep::Episode)
@@ -21,7 +21,7 @@ function Base.start(ep::Episode)
 end
 
 function Base.done(ep::Episode, i)
-	finished(ep.env, state(ep.env)) || i >= ep.maxiter
+	finished(ep.env, state(ep.env)) || i >= ep.maxsteps
 end
 
 function Base.next(ep::Episode, i)
@@ -55,7 +55,7 @@ on_step(env::AbstractEnvironment, i::Int, sars) = return
 # # run a single episode. by default, it will run until `step!` returns false
 # function episode!(env::AbstractEnvironment,
 # 				  policy::AbstractPolicy;
-# 				  maxiter::Int = typemax(Int),
+# 				  maxsteps::Int = typemax(Int),
 # 				  stepfunc::Function = on_step)
 # 	reset!(env)
 # 	i = 1
@@ -68,7 +68,7 @@ on_step(env::AbstractEnvironment, i::Int, sars) = return
 # 		r, s = step!(env, s, a)
 # 		stepfunc(env, i)
 # 		total_reward += r
-# 		if done(env) || i > maxiter
+# 		if done(env) || i > maxsteps
 # 			break
 # 		end
 # 		i += 1

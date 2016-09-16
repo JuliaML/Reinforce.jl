@@ -9,6 +9,11 @@ using Distributions
 @reexport using LearnBase
 using RecipesBase
 using ValueHistories
+using Parameters
+using StochasticOptimization
+
+import LearnBase: learn!
+import StochasticOptimization: pre_hook, iter_hook, finished, post_hook
 
 export
 	AbstractEnvironment,
@@ -29,14 +34,6 @@ export
 
 	Episode,
 	episode!
-
-# ----------------------------------------------------------------
-
-# NOTE: action sets are now implemented through LearnBase:
-    # AbstractSet,
-    #     IntervalSet,
-    #     DiscreteSet,
-    #     TupleSet,
 
 
 # ----------------------------------------------------------------
