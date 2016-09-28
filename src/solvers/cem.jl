@@ -76,7 +76,7 @@ function learn!(policy::AbstractPolicy, strat::CrossEntropyMethod, env::Abstract
     n_elite = round(Int, strat.cem_batchsize * strat.cem_elitefrac)
     elite_indices = sortperm(Rs, rev=true)[1:n_elite]
     elite_θs = θs[elite_indices]
-    info("Iteration $(strat.t). mean(R): $(mean(Rs)) max(R): $(maximum(Rs))")
+    info("Iteration $(strat.t). mean(R): $(mean(Rs)) max(R): $(maximum(Rs)) ‖μ‖²: $(norm(strat.μ)) ‖σ‖²: $(norm(strat.σ))")
 
     # update the policy from the empirical statistics of the elite set
     for j=1:length(strat.μ)
@@ -85,7 +85,7 @@ function learn!(policy::AbstractPolicy, strat::CrossEntropyMethod, env::Abstract
         strat.Z[j] = strat.noise_func(strat.t)
         strat.σ[j] = sqrt(var(θj) + strat.Z[j])
     end
-    @show strat.μ strat.σ strat.Z
+    # @show strat.μ strat.σ strat.Z
 end
 
 
