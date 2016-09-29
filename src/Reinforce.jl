@@ -25,6 +25,7 @@ export
 
 	AbstractPolicy,
 	RandomPolicy,
+    StochasticPolicy,
 	action,
 
 	AbstractState,
