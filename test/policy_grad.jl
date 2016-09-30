@@ -109,9 +109,12 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     # multivariate normal distribution for each state
     policy = StochasticPolicy(A, nn)
 
-    # update the policy from the state, then sample actions
-    a = action(policy, 0.0, s, A)
-    @show a
+    # # update the policy from the state, then sample actions
+    # a = action(policy, 0.0, s, A)
+    # @show a
+
+    R,N = episode!(env, policy, stepfunc = OpenAIGym.render)
+    @show R,N
 
     # tp = TracePlot(2, layout=@layout([a;b{0.2h}]))
     # tracer = IterFunction((policy,i) -> begin
@@ -127,6 +130,7 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     # learner = make_learner(cem, tracer, sublearners...; maxiter=maxiter, kw...)
     # learn!(policy, learner, repeated(env))
 
+    env, policy
 end
 
 
