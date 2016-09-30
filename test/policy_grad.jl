@@ -95,13 +95,23 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
 
     # create a stochastic policy which can sample actions from a multivariate normal dist
     A = actions(env,s)
-    policy = StochasticPolicy(A)
-    @show A policy
+    nA = length(A)
+    # policy = StochasticPolicy(A)
+    # @show A policy
 
     # create a neural net mapping states to μ/Σ of the MvNormal
-    nn = nnet(nin, input_length(policy), [5], :softplus)
-    Transformations.link_nodes!(nn.output, policy.input)
+    nϕ = nA * (nA+1)  # size of μ + size of Z
+    nn = nnet(nin, nϕ, [5], :softplus)
+    # Transformations.link_nodes!(nn.output, policy.input)
     @show nn
+
+    # this is a stochastic policy which learns the parameters of a
+    # multivariate normal distribution for each state
+    policy = StochasticPolicy(A, nn)
+
+    # update the policy from the state, then sample actions
+    a = action(policy, 0.0, s, A)
+    @show a
 
     # tp = TracePlot(2, layout=@layout([a;b{0.2h}]))
     # tracer = IterFunction((policy,i) -> begin
