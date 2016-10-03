@@ -6,7 +6,7 @@ action(policy::RandomPolicy, r, s′, A′) = rand(A′)
 
 # NOTE: see http://qwone.com/~jason/writing/multivariateNormal.pdf
 #   for derivations of gradients wrt μ and Λ:
-#       ∇ log π(a | s) = ∇ log π(a | ϕ)
+#       ∇log P(z|ϕ)
 
 # TODO: the policy should be separated from the generating distribution
 
@@ -15,22 +15,52 @@ A StochasticPolicy is parameterized by the action set from which it chooses acti
 
 More specifically, it samples from a distribution D(ϕ), where ϕ contains all sufficient statistics.
 In the case of a MultivariateNormal N(μ, Σ):
-    Σ = ΛΛ'   (Λ is the cholesky decomp to ensure Σ is positive definite)
+    Σ = ΛΛ'   (we output Λ to ensure Σ is positive definite)
     ϕ := vcat(μ, vec(Λ))
-    ϕ = f(s)
+    ϕ(s,θ) is a learnable transformation from states to sufficient statistics
 
-So ϕ is the output of our transformation f(s)... mapping state s to sufficient statistics μ/Λ.
-We then sample from our multivariate distribution: z ~ N(μ, ΛΛ')
-and (deterministically) map that sample to actions: a(z) = project(logistic(z) --> A)
+We then sample from our multivariate distribution:
+    z ~ D(ϕ)
+and (deterministically) map that sample to actions (i.e. project squashed samples `z` into the action space `A`):
+    a = π(z)    or    a ~ π(s,θ)
 
-Since the last step is deterministic: P(a(z)|z,s) = P(a(z)|z)P(z|s) = 1 * P(z|s)
+---
+
+Define:
+    a ~ π(s,θ)        is the generating distribution for actions given s
+    τ ~ episode(π)    is the full trajectory of an episode given π: (s₀, a₀, r₀, s₁, a₁, ..., rₜ₋₁, sₜ)
+    R(τ)              is the total return of episode τ: ∑rᵢ
+    η = E[R(τ)]       is the expected total return when following policy π
+
+---
+
+We want to estimate the gradient:
+    ∇ = ∂η/∂θ
+
+Note: The gradient wrt transformation params θ can be broken into the components of ϕ which map to μ/Λ.
+Note: Unless stated, sums are {t = 0 --> T-1}
+
+Using the policy gradient theorem:
+    Ĝ(τ) = R(τ) ∇log P(τ|θ)
+
+where:
+    ∇log P(τ|θ) = ∇ ∑ log π(a|s,θ)
+
+But that's annoying.  We could instead estimate the gradient of one reward:
+    ĝₜ = rₜ ∑₀₋ₜ ∇log π(a|s,θ)
+or of one time step for all subsequent rewards:
+    ĝₜ = ∑ [ ∇log π(a|s,θ) (∑{>t} rₜ) ]
+
+---
+
+Notes:
+
+Assuming the first and last steps are deterministic:
+    P(a|z,s,θ) = P(a|z) * P(z|ϕ) * P(ϕ|s,θ)
+               = 1 * P(z|ϕ) * 1
+               = P(z|ϕ)
 So:
-    ∇log π(a|θ) = ∇log P(z|ϕ) * (∂ϕ / ∂θ)
-
-If η(θ,s) := E[R|π,s] is the expected return of a policy (π is the generating distribution for actions given s)
-    ∇ηₜ(θ,s) = Rₜ ∑ (∂log P(z|ϕ) / ∂ϕ) * (∂ϕ / ∂θ)
-
-tl;dr The gradient wrt transformation params θ can be broken
+    ∇log P(a|z,s,θ) = ∇log P(z|ϕ)
 """
 type StochasticPolicy{T, ASET <: AbstractSet, DIST <: Distribution, TRANS <: Transformation} <: AbstractPolicy
     dist::DIST
