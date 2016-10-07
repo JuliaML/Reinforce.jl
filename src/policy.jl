@@ -4,22 +4,10 @@ action(policy::RandomPolicy, r, s′, A′) = rand(A′)
 
 # ------------------------------------------------------------------
 
-# NOTE: see http://qwone.com/~jason/writing/multivariateNormal.pdf
-#   for derivations of gradients wrt μ and Λ:
-#       ∇log P(z|ϕ)
-
-# TODO: the policy should be separated from the generating distribution
-
-
-
 #=
-Note: Much of the notation below tries to follow that of John Schulman et al in High-Dimensional Continuous
-    Control using Generalized Advantage Estimation 2016
+See http://www.breloff.com/DeepRL-OnlineGAE/ for details/explanation of OnlineGAE
 
-
-A OnlineGAE is parameterized by the action set from which it chooses actions.
-
-More specifically, it samples from a distribution D(ϕ), where ϕ contains all sufficient statistics.
+Samples from a distribution D(ϕ), where ϕ contains all sufficient statistics.
 In the case of a MultivariateNormal N(μ, Σ):
     Σ = ΛΛ'   (we output Λ to ensure Σ is positive definite)
     ϕ := vcat(μ, vec(Λ))
@@ -32,74 +20,9 @@ and (deterministically) map that sample to actions (i.e. project squashed sample
 
 ---
 
-Define:
-    a ~ π(s,θ)          is the generating distribution for actions given s
-    τ ~ episode(π)      is the full trajectory of an episode given π: (s₀, a₀, r₀, s₁, a₁, ..., rₜ₋₁, sₜ)
-    R(τ)                is the total return of episode τ: ∑rᵢ
-    η(π) = E[R(τ)]      is the expected total return of a trajectory when following policy π
-
----
-
-We want to estimate the gradient:
-    ∇ = ∂η/∂θ
-
-Note: The gradient wrt transformation params θ can be broken into the components of ϕ which map to μ/Λ.
-Note: Unless stated, sums are {t = 0 --> T-1}
-
-Using the policy gradient theorem:
-    Ĝ(τ) = R(τ) ∇log P(τ|θ)
-
-where:
-    ∇log P(τ|θ) = ∇ ∑ log π(a|s,θ)
-
-But that's annoying.  We could instead estimate the gradient of one reward (good for online calcs with eligibility traces):
-    ĝₜ = rₜ ∑₀₋ₜ ∇log π(a|s,θ)                 (1)
-
-We can subtract a baseline bₜ from rₜ without adding bias to ĝ:
-    ĝ = (rₜ - bₜ) ∑₀₋ₜ ∇log π(a|s,θ)
-
-We could possibly use a single-return value function:
-    bₜ = E[rₜ|sₜ]
-
----
-
-We could also reorganize to one time step for all subsequent rewards:
-    ĝₜ = ∑ [ ∇log π(a|s,θ) (E(∑{>t} rₜ) - bₜ) ]
-
-which is near-optimal when bₜ ≈ V(sₜ) (the value function).
-
-If we also note that:
-    Q(sₜ,aₜ) = E(∑{>t} rₜ)
-and that the advantage function is:
-    A(sₜ,aₜ) = Q(sₜ,aₜ) - V(sₜ)
-
-then it follows that:
-    ĝ = ∑ [ ∇log π(aₜ|sₜ,θ) A(sₜ,aₜ) ]
-
-and we can use discounted rewards with discount factor γ:
-    ĝ = ∑ [ ∇log π(aₜ|sₜ,θ) Aᵞ(sₜ,aₜ) ]         (2)
-
----
-
-Generalized Advantage Estimation (GAE) concerns itself with estimating "good" values of Aᵞ(sₜ,aₜ)
-in equation 2, where we can trade off bias against variance in our estimation of ĝ.
-
-Start with the TD (Bellman) residual:
-    δₜ = rₜ + γVᵞ(sₜ+₁) - Vᵞ(sₜ)
-
-GAE can be simply summarized with the estimate of the advantage:
-    Âₜ = δₜ + (γλ)δₜ+₁ + (γλ)²δₜ+₂ + (γλ)³δₜ+₃ + ...
-       = ∑ (γλ)ˡδₜ+ₗ
-
-which is an estimate of the next step and discounted subsequent steps Bellman residuals,
-where the discounting is controlled with parameter λ.  When λ is 0, it reverts to the TD residual,
-and when λ is 1, it is an unbiased estimate for ĝ.  This allows us to precisely control the bias/variance
-tradeoff when estimating ĝ:
-    ĝᵞ = ∑ [ ∇log π(aₜ|sₜ,θ) ∑ (γλ)ˡδₜ+ₗ ]        (3)
-
----
-
 Notes:
+
+The gradient wrt transformation params θ can be broken into the components of ϕ which map to μ/Λ.
 
 Assuming the first and last steps are deterministic:
     P(a|z,s,θ) = P(a|z) * P(z|ϕ) * P(ϕ|s,θ)
