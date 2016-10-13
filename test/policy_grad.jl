@@ -125,15 +125,15 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     #   stop after 500 total steps or 1 minute
     #   render the frame each iteration
     learner = make_learner(
-        GradientLearner(1e-3, Adamax()),
+        GradientLearner(1e-1, Adamax()),
         episodes,
-        MaxIter(10000),
+        MaxIter(100000),
         TimeLimit(60),
         # ShowStatus(100),
         IterFunction((m,i) -> begin
-            @show norm(params(policy))
+            @show i, norm(params(policy))
             OpenAIGym.render(env, i, nothing)
-        end, 100)
+        end, 200)
     )
 
     # our metalearner will infinitely take a step in an episode,

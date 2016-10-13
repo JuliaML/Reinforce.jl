@@ -31,6 +31,10 @@ function Base.next(ep::Episode, i)
     r = reward(env)
 	a = action(ep.policy, r, s, A)
     @assert a in A
+    # if !(a in A)
+    #     warn("action $a is not in $A")
+    #     a = rand(A)
+    # end
 	r, s′ = step!(env, s, a)
 	ep.total_reward += r
 	ep.niter = i + 1
@@ -112,6 +116,10 @@ function learn!(policy, ep::EpisodeLearner, i)
     r = reward(env)
 	a = action(policy, r, s, A)
     @assert a in A
+    # if !(a in A)
+    #     warn("action $a is not in $A")
+    #     a = rand(A)
+    # end
 	r, s′ = step!(env, s, a)
 	ep.total_reward += r
 

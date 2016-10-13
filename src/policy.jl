@@ -59,7 +59,7 @@ function grad!(critic::ValueCritic, r::Number)
     Vs′ = output_value(critic.trans)[1]
     Vs = critic.lastv
     critic.δ = r + critic.γ * Vs′ - Vs
-    output_grad(critic.trans)[1] = critic.δ
+    output_grad(critic.trans)[1] = -critic.δ
     grad!(critic.trans)
 end
 
