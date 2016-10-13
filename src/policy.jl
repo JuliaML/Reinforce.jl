@@ -83,7 +83,7 @@ type OnlineGAE{T      <: Number,
                DIST   <: MvNormalTransformation,
                CRITIC <: ValueCritic,
                P      <: Params
-              } <: AbstractPolicy
+              } <: Learnable
     A::ASET           # the action space
     ϕ::PHI            # learnable transformation to output sufficient statistics of D
     D::DIST           # generative transformation for sampling inputs to a
@@ -91,7 +91,7 @@ type OnlineGAE{T      <: Number,
     γ::T              # the discount for the critic
     λ::T              # the extra discount for the actor
     ϵ::Vector{T}      # eligibility traces for the learnable params θ in transformation ϕ
-    t::Int            # current timestep
+    # t::Int            # current timestep
     # ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
     params::P         # the combined parameters from the actor transformation ϕ and the critic transformation
 end
@@ -108,11 +108,17 @@ function OnlineGAE{T}(A::AbstractSet,
     ϵ = zeros(T, params_length(ϕ))
     # ∇logP = zeros(T, input_length(D))
     params = consolidate_params(T, ϕ, critic_trans)
-    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, 1, params)
+    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, params)
+end
+
+# don't do anything here... we'll update during action
+LearnBase.update!(π::OnlineGAE, ::Void) = return
+
+function Reinforce.reset!{T}(π::OnlineGAE{T})
+    fill!(π.ϵ, zero(T))
 end
 
 function Reinforce.action(π::OnlineGAE, r, s′, A′)
-    # @show r s′ A′
     # sample z ~ N(μ,Σ) which is determined by ϕ
     transform!(π.ϕ, s′)
     z = transform!(π.D)
@@ -121,8 +127,6 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
     # a = (â --> [lo,hi])
     a = A′.lo .+ logistic.(z) .* (A′.hi .- A′.lo)
     # @show a
-
-    # Note: the rest of the function populates parameter gradients for the actor and critic
 
     # update the critic
     transform!(π.critic, s′)
@@ -137,10 +141,8 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
     =#
 
     # update the grad-log-prob of distribution D
-    # Transformations.gradlogprob!(π.∇logP, π.D)
     grad!(π.D)
     grad!(π.ϕ)
-    # ∇logP = input_grad(π.D)
     ∇logP = grad(π.ϕ)
 
     # we use ∇logP to update the eligibility trace ϵ
@@ -155,61 +157,3 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
 
     a
 end
-
-# ----------------------------------------------------------------------
-
-# "Online Generalized Advantage Estimation for Actor-Critic Reinforcement Learning"
-# type OnlineGAE{ASET <: AbstractSet, Π <: Learnable, VAL} <: AbstractPolicy
-#     π::Π        # the action function: a ~ π(s,θ)
-#     V::VAL      # learnable value function: V(s)
-#     # f::TRANS                        # This transformation maps: s --> ϕ
-#     # act::Activation{:logistic,T}    # After sampling from dist(μ,Σ), squash to [0,1].
-#     #                                 # The actions are activation outputs mapped to [lo,hi]
-#     # actions::Vector{T}
-# end
-#
-# function OnlineGAE{T, DIST<:MvNormal}(::Type{T}, ::Type{DIST}, A::AbstractSet, f::Transformation)
-#     n = length(A)
-#     nϕ = n * (n+1)  # size of μ + size of Z
-#     OnlineGAE(
-#         MultivariateNormal(zeros(T,n), eye(T,n)),
-#         A,
-#         f,
-#         Activation{:logistic,T}(n),
-#         zeros(T,n)
-#     )
-# end
-# function OnlineGAE(A::AbstractSet, f::Transformation)
-#     OnlineGAE(Float64, MultivariateNormal, A, f)
-# end
-#
-# function Reinforce.action(policy::OnlineGAE, r, s′, A′)
-#     n = length(A′)
-#     # dist = policy.dist
-#
-#     # TODO: do something useful with reward (using eligibility trace, update params?)
-#
-#     # # apply the mapping from state to suff. stats
-#     # ϕ = transform!(policy.f, s′)
-#     #
-#     # # update μ with the first n input values
-#     # dist.μ[:] = view(ϕ, 1:n)
-#     #
-#     # # next update the stored cholesky decomp U in: Σ = U'U
-#     # # this allows us to ensure positive definiteness on Σ
-#     # dist.Σ.chol.factors[:] = view(ϕ, n+1:length(ϕ))
-#
-#     # sample from the distribution, then squash to [0,1]
-#     # z ~ N(μ, Σ)
-#     # â = logistic(z)
-#     z = rand(dist)
-#     â = transform!(policy.act, z)
-#
-#     # project our squashed sample onto into the action space to get our actions
-#     # a = (â --> [lo,hi])
-#     for i in 1:n
-#         lo, hi = A′.lo[i], A′.hi[i]
-#         policy.actions[i] = lo + â[i] * (hi - lo)
-#     end
-#     policy.actions
-# end

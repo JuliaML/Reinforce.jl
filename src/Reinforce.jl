@@ -35,6 +35,7 @@ export
 	state!,
 
 	Episode,
+    EpisodeLearner,
 	episode!
 
 

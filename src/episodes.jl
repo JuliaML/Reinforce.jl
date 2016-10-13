@@ -75,3 +75,52 @@ on_step(env::AbstractEnvironment, i::Int, sars) = return
 # 	end
 # 	total_reward, i
 # end
+
+# ----------------------------------------------------------------
+
+"""
+This is a learning strategy that can infinitely generate steps of episodes,
+and seemlessly reset when appropriate.
+"""
+type EpisodeLearner <: LearningStrategy
+    env
+    # policy
+    total_reward::Float64   # total reward of the episode
+    nepisode::Int           # number of completed episodes
+    nsteps::Int             # number of completed steps in this episode
+    should_reset::Bool      # should we reset the episode on the next call?
+    finishers  # tuple of LearningStrategies to check for completion of each episode
+end
+
+function EpisodeLearner(env, finishers::LearningStrategy...)
+    EpisodeLearner(env, 0.0, 0, 0, true, finishers)
+end
+
+function learn!(policy, ep::EpisodeLearner, i)
+    if ep.should_reset
+        reset!(ep.env)
+        reset!(policy)
+        ep.should_reset = false
+        ep.total_reward = 0.0
+        ep.nsteps = 0
+    end
+
+    # take one step in the enviroment after querying the policy for an action
+	env = ep.env
+	s = state(env)
+    A = actions(env, s)
+    r = reward(env)
+	a = action(policy, r, s, A)
+    @assert a in A
+	r, s′ = step!(env, s, a)
+	ep.total_reward += r
+
+    # if this episode is done, just flag it so we reset next time
+    ep.nsteps += 1
+    if finished(env, s′) || any(fin -> finished(fin, policy, ep.nsteps), ep.finishers)
+        ep.should_reset = true
+        ep.nepisode += 1
+        info("Finished episode $(ep.nepisode) after $(ep.nsteps) steps. Reward: $(ep.total_reward)")
+    end
+    return
+end

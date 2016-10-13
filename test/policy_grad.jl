@@ -118,8 +118,29 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     # this is a stochastic policy which follows http://www.breloff.com/DeepRL-OnlineGAE/
     policy = OnlineGAE(A, ϕ, D, C, γ, λ)
 
-    R,N = episode!(env, policy, stepfunc = OpenAIGym.render)
-    @show R,N
+    # this is our sub-learner to manage episode state
+    episodes = EpisodeLearner(env, MaxIter(2000))
+
+    # our main metalearner.
+    #   stop after 500 total steps or 1 minute
+    #   render the frame each iteration
+    learner = make_learner(
+        GradientLearner(1e-3, Adamax()),
+        episodes,
+        MaxIter(10000),
+        TimeLimit(60),
+        # ShowStatus(100),
+        IterFunction((m,i) -> begin
+            @show norm(params(policy))
+            OpenAIGym.render(env, i, nothing)
+        end, 100)
+    )
+
+    # our metalearner will infinitely take a step in an episode,
+    learn!(policy, learner)
+
+    # R,N = episode!(env, policy, stepfunc = OpenAIGym.render)
+    # @show R,N
 
     # tp = TracePlot(2, layout=@layout([a;b{0.2h}]))
     # tracer = IterFunction((policy,i) -> begin
