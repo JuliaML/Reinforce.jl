@@ -107,7 +107,7 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
 
     # this is a stochastic policy which learns the parameters of a
     # multivariate normal distribution for each state
-    policy = StochasticPolicy(A, nn)
+    policy = OnlineGAE(A, nn)
 
     # # update the policy from the state, then sample actions
     # a = action(policy, 0.0, s, A)
