@@ -11,6 +11,7 @@ using RecipesBase
 using ValueHistories
 using Parameters
 using StochasticOptimization
+using Transformations
 
 import LearnBase: learn!
 import StochasticOptimization: pre_hook, iter_hook, finished, post_hook
