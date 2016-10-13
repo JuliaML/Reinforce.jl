@@ -42,17 +42,20 @@ type ValueCritic{T,TRANS<:Learnable} <: Learnable
     γ::T            # discount
     lastv::T       # V(s)
     δ::T          # TD(0) delta: δ = r + γV(s′) - V(s)
-    ValueCritic(trans::TRANS, γ::T) = new(trans, γ, zero(T), zero(T))
 end
 
-function transform!(critic::ValueCritic, s)
+function ValueCritic{T}(::Type{T}, trans::Learnable, γ::T)
+    ValueCritic{T,typeof(trans)}(trans, γ, zero(T), zero(T))
+end
+
+function transform!(critic::ValueCritic, s::AbstractArray)
     critic.lastv = output_value(critic.trans)[1]
-    v(s)
+    transform!(critic.trans, s)
 end
 
 # give reward r, compute output grad: δ = r + γV(s′) - V(s)
 # then backprop to get ∇θ
-function grad!(critic::ValueCritic, r)
+function grad!(critic::ValueCritic, r::Number)
     Vs′ = output_value(critic.trans)[1]
     Vs = critic.lastv
     critic.δ = r + critic.γ * Vs′ - Vs
@@ -89,7 +92,7 @@ type OnlineGAE{T      <: Number,
     λ::T              # the extra discount for the actor
     ϵ::Vector{T}      # eligibility traces for the learnable params θ in transformation ϕ
     t::Int            # current timestep
-    ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
+    # ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
     params::P         # the combined parameters from the actor transformation ϕ and the critic transformation
 end
 
@@ -101,21 +104,23 @@ function OnlineGAE{T}(A::AbstractSet,
                       λ::T)
     # connect transformations, init the critic
     link_nodes!(ϕ, D)
-    critic = ValueCritic(critic_trans, γ)
+    critic = ValueCritic(T, critic_trans, γ)
     ϵ = zeros(T, params_length(ϕ))
-    ∇logP = zeros(T, input_length(D))
+    # ∇logP = zeros(T, input_length(D))
     params = consolidate_params(T, ϕ, critic_trans)
-    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, 1, ∇logP, params)
+    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, 1, params)
 end
 
 function Reinforce.action(π::OnlineGAE, r, s′, A′)
+    # @show r s′ A′
     # sample z ~ N(μ,Σ) which is determined by ϕ
-    ϕ = transform!(π.ϕ, s′)
+    transform!(π.ϕ, s′)
     z = transform!(π.D)
 
     # project our squashed sample onto into the action space to get our actions
     # a = (â --> [lo,hi])
-    a = A′.lo .+ z .* (A′.hi .- A′.lo)
+    a = A′.lo .+ logistic.(z) .* (A′.hi .- A′.lo)
+    # @show a
 
     # Note: the rest of the function populates parameter gradients for the actor and critic
 
@@ -132,18 +137,20 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
     =#
 
     # update the grad-log-prob of distribution D
-    Transformations.gradlogprob!(π.∇logP, π.D)
-    # grad!(π.D)
+    # Transformations.gradlogprob!(π.∇logP, π.D)
+    grad!(π.D)
+    grad!(π.ϕ)
     # ∇logP = input_grad(π.D)
+    ∇logP = grad(π.ϕ)
 
     # we use ∇logP to update the eligibility trace ϵ
-    # then we set the gradient estimate: ĝ = δϵ
+    # then we overwrite it with the gradient estimate: ĝ = δϵ
     γλ = π.γ * π.λ
     ϵ = π.ϵ
-    ∇ = grad(ϕ)
+    # ∇ = grad(π.ϕ)
     for i=1:length(ϵ)
-        ϵ[i] = γλ * ϵ[i] + ∇logP
-        ∇[i] = π.critic.δ * ϵ[i]
+        ϵ[i] = γλ * ϵ[i] + ∇logP[i]
+        ∇logP[i] = π.critic.δ * ϵ[i]
     end
 
     a

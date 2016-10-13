@@ -90,28 +90,33 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
 					   # noise_func = t -> max(noise_max - t/noise_steps, 0.0),
 					   kw...)
     s = state(env)
-    nin = length(s)
-    @show s nin
-
-    # create a stochastic policy which can sample actions from a multivariate normal dist
+    ns = length(s)
     A = actions(env,s)
     nA = length(A)
-    # policy = StochasticPolicy(A)
-    # @show A policy
+    @show s ns
 
-    # create a neural net mapping states to μ/Σ of the MvNormal
-    nϕ = nA * (nA+1)  # size of μ + size of Z
-    nn = nnet(nin, nϕ, [5], :softplus)
-    # Transformations.link_nodes!(nn.output, policy.input)
-    @show nn
+    # create a stochastic policy which can sample actions from a multivariate normal dist
 
-    # this is a stochastic policy which learns the parameters of a
-    # multivariate normal distribution for each state
-    policy = OnlineGAE(A, nn)
+    # create a multivariate normal transformation with underlying params μ/σ
+    μ = zeros(nA)
+    σ = zeros(nA)  # diagonal
+    D = MvNormalTransformation(μ, σ)
+    @show D
 
-    # # update the policy from the state, then sample actions
-    # a = action(policy, 0.0, s, A)
-    # @show a
+    # create a neural net mapping: s --> ϕ = vec(μ,U) of the MvNormal
+    nϕ = 2nA
+    ϕ = nnet(ns, nϕ, [5], :softplus, :identity)
+    @show ϕ
+
+    # the critic's value function... mapping state to value
+    C = nnet(ns, 1, [5], :softplus, :identity)
+
+    # our discount rates # TODO: can we learn these too??
+    γ = 0.95
+    λ = 0.8
+
+    # this is a stochastic policy which follows http://www.breloff.com/DeepRL-OnlineGAE/
+    policy = OnlineGAE(A, ϕ, D, C, γ, λ)
 
     R,N = episode!(env, policy, stepfunc = OpenAIGym.render)
     @show R,N

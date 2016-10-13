@@ -13,7 +13,7 @@ using Parameters
 using StochasticOptimization
 using Transformations
 
-import LearnBase: learn!
+import LearnBase: learn!, transform!, grad!
 import StochasticOptimization: pre_hook, iter_hook, finished, post_hook
 
 export
@@ -26,7 +26,7 @@ export
 
 	AbstractPolicy,
 	RandomPolicy,
-    StochasticPolicy,
+    OnlineGAE,
 	action,
 
 	AbstractState,
