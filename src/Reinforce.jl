@@ -8,10 +8,11 @@ using Reexport
 using Distributions
 @reexport using LearnBase
 using RecipesBase
-using ValueHistories
-using Parameters
+# using ValueHistories
+# using Parameters
 using StochasticOptimization
 using Transformations
+using Penalties
 
 import LearnBase: learn!, transform!, grad!
 import StochasticOptimization: pre_hook, iter_hook, finished, post_hook

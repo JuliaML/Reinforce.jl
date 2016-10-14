@@ -1,10 +1,9 @@
-julia 0.5-
+julia 0.5
 
 Reexport
 StatsBase
 Distributions
 LearnBase
 RecipesBase
-IterationManagers
 Parameters
 ValueHistories

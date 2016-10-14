@@ -88,16 +88,15 @@ and seemlessly reset when appropriate.
 """
 type EpisodeLearner <: LearningStrategy
     env
-    # policy
     total_reward::Float64   # total reward of the episode
     nepisode::Int           # number of completed episodes
     nsteps::Int             # number of completed steps in this episode
     should_reset::Bool      # should we reset the episode on the next call?
-    finishers  # tuple of LearningStrategies to check for completion of each episode
+    learners                # tuple of LearningStrategies
 end
 
-function EpisodeLearner(env, finishers::LearningStrategy...)
-    EpisodeLearner(env, 0.0, 0, 0, true, finishers)
+function EpisodeLearner(env, learners::LearningStrategy...)
+    EpisodeLearner(env, 0.0, 0, 0, true, learners)
 end
 
 function learn!(policy, ep::EpisodeLearner, i)
@@ -107,6 +106,9 @@ function learn!(policy, ep::EpisodeLearner, i)
         ep.should_reset = false
         ep.total_reward = 0.0
         ep.nsteps = 0
+        for learner in ep.learners
+            pre_hook(learner, policy)
+        end
     end
 
     # take one step in the enviroment after querying the policy for an action
@@ -115,19 +117,27 @@ function learn!(policy, ep::EpisodeLearner, i)
     A = actions(env, s)
     r = reward(env)
 	a = action(policy, r, s, A)
+    if !(a in A)
+        warn("action $a is not in $A")
+        # a = rand(A)
+    end
     @assert a in A
-    # if !(a in A)
-    #     warn("action $a is not in $A")
-    #     a = rand(A)
-    # end
 	r, s′ = step!(env, s, a)
 	ep.total_reward += r
 
-    # if this episode is done, just flag it so we reset next time
     ep.nsteps += 1
-    if finished(env, s′) || any(fin -> finished(fin, policy, ep.nsteps), ep.finishers)
+    for learner in ep.learners
+        learn!(policy, learner, ep.nsteps)
+        iter_hook(learner, policy, ep.nsteps)
+    end
+
+    # if this episode is done, just flag it so we reset next time
+    if finished(env, s′) || any(learner -> finished(learner, policy, ep.nsteps), ep.learners)
         ep.should_reset = true
         ep.nepisode += 1
+        for learner in ep.learners
+            post_hook(learner, policy)
+        end
         info("Finished episode $(ep.nepisode) after $(ep.nsteps) steps. Reward: $(ep.total_reward)")
     end
     return

@@ -59,7 +59,7 @@ function grad!(critic::ValueCritic, r::Number)
     Vs′ = output_value(critic.trans)[1]
     Vs = critic.lastv
     critic.δ = r + critic.γ * Vs′ - Vs
-    output_grad(critic.trans)[1] = -critic.δ
+    output_grad(critic.trans)[1] = critic.δ
     grad!(critic.trans)
 end
 
@@ -82,7 +82,8 @@ type OnlineGAE{T      <: Number,
                PHI    <: Learnable,
                DIST   <: MvNormalTransformation,
                CRITIC <: ValueCritic,
-               P      <: Params
+               P      <: Params,
+               PEN    <: Penalty
               } <: Learnable
     A::ASET           # the action space
     ϕ::PHI            # learnable transformation to output sufficient statistics of D
@@ -94,6 +95,7 @@ type OnlineGAE{T      <: Number,
     # t::Int            # current timestep
     # ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
     params::P         # the combined parameters from the actor transformation ϕ and the critic transformation
+    penalty::PEN      # a penalty to add to param gradients
 end
 
 function OnlineGAE{T}(A::AbstractSet,
@@ -101,14 +103,15 @@ function OnlineGAE{T}(A::AbstractSet,
                       D::MvNormalTransformation,
                       critic_trans::Learnable,
                       γ::T,
-                      λ::T)
+                      λ::T;
+                      penalty::Penalty = NoPenalty())
     # connect transformations, init the critic
     link_nodes!(ϕ, D)
     critic = ValueCritic(T, critic_trans, γ)
     ϵ = zeros(T, params_length(ϕ))
     # ∇logP = zeros(T, input_length(D))
     params = consolidate_params(T, ϕ, critic_trans)
-    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, params)
+    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, params, penalty)
 end
 
 # don't do anything here... we'll update during action
@@ -154,6 +157,9 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
         ϵ[i] = γλ * ϵ[i] + ∇logP[i]
         ∇logP[i] = π.critic.δ * ϵ[i]
     end
+
+    # add the penalty to the gradient
+    addgrad!(π.params.∇, π.penalty, π.params.θ)
 
     a
 end

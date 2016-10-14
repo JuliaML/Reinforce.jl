@@ -8,6 +8,7 @@ using OpenAIGym
 # using Distributions
 using Transformations
 using StochasticOptimization
+using Penalties
 
 using MLPlots; gr(size=(500,500))
 
@@ -116,10 +117,17 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     λ = 0.8
 
     # this is a stochastic policy which follows http://www.breloff.com/DeepRL-OnlineGAE/
-    policy = OnlineGAE(A, ϕ, D, C, γ, λ)
+    policy = OnlineGAE(A, ϕ, D, C, γ, λ,
+                    #    penalty = ElasticNetPenalty(1e-4,0.5)
+                       )
 
     # this is our sub-learner to manage episode state
-    episodes = EpisodeLearner(env, MaxIter(2000))
+    episodes = EpisodeLearner(env,
+        MaxIter(2000),
+        IterFunction((m,i) -> begin
+            @show i, norm(params(policy)), norm(grad(policy))
+        end, 50)
+    )
 
     # our main metalearner.
     #   stop after 500 total steps or 1 minute
@@ -131,9 +139,13 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
         TimeLimit(60),
         # ShowStatus(100),
         IterFunction((m,i) -> begin
-            @show i, norm(params(policy))
-            OpenAIGym.render(env, i, nothing)
-        end, 200)
+            # if episodes.nsteps == 1
+            #     @show i, norm(params(policy)), norm(grad(policy))
+            # end
+            if episodes.nepisode % 10 == 0
+                OpenAIGym.render(env, i, nothing)
+            end
+        end)
     )
 
     # our metalearner will infinitely take a step in an episode,
