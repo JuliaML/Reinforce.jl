@@ -10,7 +10,7 @@ using Transformations
 using StochasticOptimization
 using Penalties
 
-using MLPlots; gr(size=(500,500))
+using MLPlots; gr(size=(1000,1000))
 
 # ----------------------------------------------------------------
 
@@ -60,23 +60,6 @@ using MLPlots; gr(size=(500,500))
 # # 	Transformations.sigmoid(transform(π.trans, s)[1]) * (A.amax-A.amin) + A.amin
 # # end
 
-# ----------------------------------------------------------------
-
-# function myplot(t, hist_min, hist_mean, hist_max, anim=nothing)
-# 	(env,i,sars) -> if mod1(t,3)==1 && mod1(i,10)==1
-# 		plot(
-# 			plot(hist_mean, c=:black, fill=((hist_min,hist_max), 0.2), title="Progress", leg=false),
-# 			plot(env, title = "Episode: $t  Iter: $i")
-# 		)
-# 		if anim == nothing
-# 			gui()
-# 		else
-# 			frame(anim)
-# 		end
-# 	else
-# 		return
-# 	end
-# end
 
 # ----------------------------------------------------------------
 
@@ -86,9 +69,6 @@ using MLPlots; gr(size=(500,500))
 function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
                        maxsteps = 500, # max number of steps in one episode
                        maxiter = 1000, # max learning iterations
-					   # noise_max = 1.0,
-					   # noise_steps = 20,
-					   # noise_func = t -> max(noise_max - t/noise_steps, 0.0),
 					   kw...)
     s = state(env)
     ns = length(s)
@@ -106,11 +86,17 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
 
     # create a neural net mapping: s --> ϕ = vec(μ,U) of the MvNormal
     nϕ = 2nA
-    ϕ = nnet(ns, nϕ, [5], :softplus, :identity)
+    nh = Int[10]
+    ϕ = nnet(ns, nϕ, nh, :softplus, :identity)
     @show ϕ
 
     # the critic's value function... mapping state to value
-    C = nnet(ns, 1, [5], :softplus, :identity)
+    C = nnet(ns, 1, nh, :softplus, :identity)
+
+    # chainplots... put one for each of ϕ/C side-by-side
+    cp_ϕ = ChainPlot(ϕ)
+    cp_C = ChainPlot(C)
+    plt = plot(cp_ϕ.plt, cp_C.plt, layout=(2,1))
 
     # our discount rates # TODO: can we learn these too??
     γ = 0.95
@@ -118,7 +104,7 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
 
     # this is a stochastic policy which follows http://www.breloff.com/DeepRL-OnlineGAE/
     policy = OnlineGAE(A, ϕ, D, C, γ, λ,
-                    #    penalty = ElasticNetPenalty(1e-4,0.5)
+                       penalty = ElasticNetPenalty(5e-2,0.5)
                        )
 
     # this is our sub-learner to manage episode state
@@ -126,23 +112,22 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
         MaxIter(2000),
         IterFunction((m,i) -> begin
             @show i, norm(params(policy)), norm(grad(policy))
-        end, 50)
+            update!(cp_ϕ)
+            update!(cp_C)
+            i==100 && gui()
+        end, 100)
     )
 
     # our main metalearner.
     #   stop after 500 total steps or 1 minute
     #   render the frame each iteration
     learner = make_learner(
-        GradientLearner(1e-1, Adamax()),
+        GradientLearner(1e-2, Adamax()),
         episodes,
         MaxIter(100000),
-        TimeLimit(60),
-        # ShowStatus(100),
+        TimeLimit(180),
         IterFunction((m,i) -> begin
-            # if episodes.nsteps == 1
-            #     @show i, norm(params(policy)), norm(grad(policy))
-            # end
-            if episodes.nepisode % 10 == 0
+            if episodes.nepisode % 10 == 0 && episodes.nsteps % 5 == 0
                 OpenAIGym.render(env, i, nothing)
             end
         end)
@@ -150,23 +135,6 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
 
     # our metalearner will infinitely take a step in an episode,
     learn!(policy, learner)
-
-    # R,N = episode!(env, policy, stepfunc = OpenAIGym.render)
-    # @show R,N
-
-    # tp = TracePlot(2, layout=@layout([a;b{0.2h}]))
-    # tracer = IterFunction((policy,i) -> begin
-    #     mod1(i,10)==1 || return
-    #
-    #     #run one episode
-    #     R,N = episode!(env, policy, stepfunc = OpenAIGym.render)
-    #     @show R, N
-    #     push!(tp, i, [R,N])
-    #     gui(tp.plt)
-    # end)
-
-    # learner = make_learner(cem, tracer, sublearners...; maxiter=maxiter, kw...)
-    # learn!(policy, learner, repeated(env))
 
     env, policy
 end

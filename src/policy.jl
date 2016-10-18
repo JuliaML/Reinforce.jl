@@ -49,7 +49,7 @@ function ValueCritic{T}(::Type{T}, trans::Learnable, γ::T)
 end
 
 function transform!(critic::ValueCritic, s::AbstractArray)
-    critic.lastv = output_value(critic.trans)[1]
+    # critic.lastv = output_value(critic.trans)[1]
     transform!(critic.trans, s)
 end
 
@@ -59,7 +59,9 @@ function grad!(critic::ValueCritic, r::Number)
     Vs′ = output_value(critic.trans)[1]
     Vs = critic.lastv
     critic.δ = r + critic.γ * Vs′ - Vs
-    output_grad(critic.trans)[1] = critic.δ
+    # @show critic.δ, r, critic.γ, Vs′, Vs
+    output_grad(critic.trans)[1] = -critic.δ
+    critic.lastv = Vs′
     grad!(critic.trans)
 end
 
@@ -93,7 +95,7 @@ type OnlineGAE{T      <: Number,
     λ::T              # the extra discount for the actor
     ϵ::Vector{T}      # eligibility traces for the learnable params θ in transformation ϕ
     # t::Int            # current timestep
-    # ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
+    ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
     params::P         # the combined parameters from the actor transformation ϕ and the critic transformation
     penalty::PEN      # a penalty to add to param gradients
 end
@@ -108,10 +110,11 @@ function OnlineGAE{T}(A::AbstractSet,
     # connect transformations, init the critic
     link_nodes!(ϕ, D)
     critic = ValueCritic(T, critic_trans, γ)
-    ϵ = zeros(T, params_length(ϕ))
-    # ∇logP = zeros(T, input_length(D))
+    np = params_length(ϕ)
+    ϵ = zeros(T, np)
+    ∇logP = zeros(T, np)
     params = consolidate_params(T, ϕ, critic_trans)
-    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, params, penalty)
+    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, ∇logP, params, penalty)
 end
 
 # don't do anything here... we'll update during action
@@ -134,28 +137,36 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
     # update the critic
     transform!(π.critic, s′)
     grad!(π.critic, r)
-    # TODO: update the params??  do we do this outside of action,
-    #   by wrapping the params of the actor and critic in one vector??
 
     #=
     update the actor using the OnlineGAE formulas:
         ϵₜ = (γλ)ϵₜ₋₁ + ∇
         ĝₜ = δₜϵₜ
+
+    note: we use the grad-log-prob from the last timestep, since we
+    can't update until we compute the critic's δ, which depends
+    on the next timestep
     =#
 
-    # update the grad-log-prob of distribution D
-    grad!(π.D)
-    grad!(π.ϕ)
-    ∇logP = grad(π.ϕ)
-
-    # we use ∇logP to update the eligibility trace ϵ
-    # then we overwrite it with the gradient estimate: ĝ = δϵ
+    # we use last timestep's ∇logP to update the eligibility trace ϵ
     γλ = π.γ * π.λ
     ϵ = π.ϵ
-    # ∇ = grad(π.ϕ)
     for i=1:length(ϵ)
-        ϵ[i] = γλ * ϵ[i] + ∇logP[i]
-        ∇logP[i] = π.critic.δ * ϵ[i]
+        ϵ[i] = γλ * ϵ[i] + π.∇logP[i]
+    end
+
+    # update the grad-log-prob of distribution D, and store that for the next timestep
+    # NOTE: grad(π.ϕ) now contains the grad-log-prob of this timestep... but we don't use this
+    #   until the next timestep
+    grad!(π.D)
+    grad!(π.ϕ)
+    copy!(π.∇logP, grad(π.ϕ))
+
+    # overwrite the gradient estimate: ĝ = δϵ
+    δ = π.critic.δ
+    ∇ = grad(π.ϕ)
+    for i=1:length(ϵ)
+        ∇[i] = δ * ϵ[i]
     end
 
     # add the penalty to the gradient
