@@ -42,10 +42,11 @@ type ValueCritic{T,TRANS<:Learnable} <: Learnable
     γ::T            # discount
     lastv::T       # V(s)
     δ::T          # TD(0) delta: δ = r + γV(s′) - V(s)
+    lastδ::T
 end
 
 function ValueCritic{T}(::Type{T}, trans::Learnable, γ::T)
-    ValueCritic{T,typeof(trans)}(trans, γ, zero(T), zero(T))
+    ValueCritic{T,typeof(trans)}(trans, γ, zero(T), zero(T), zero(T))
 end
 
 function transform!(critic::ValueCritic, s::AbstractArray)
@@ -58,9 +59,10 @@ end
 function grad!(critic::ValueCritic, r::Number)
     Vs′ = output_value(critic.trans)[1]
     Vs = critic.lastv
+    critic.lastδ = critic.δ
     critic.δ = r + critic.γ * Vs′ - Vs
     # @show critic.δ, r, critic.γ, Vs′, Vs
-    output_grad(critic.trans)[1] = -critic.δ
+    output_grad(critic.trans)[1] = -critic.lastδ
     critic.lastv = Vs′
     grad!(critic.trans)
 end
@@ -96,6 +98,7 @@ type OnlineGAE{T      <: Number,
     ϵ::Vector{T}      # eligibility traces for the learnable params θ in transformation ϕ
     # t::Int            # current timestep
     ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
+    lastr::T          # most recent return
     params::P         # the combined parameters from the actor transformation ϕ and the critic transformation
     penalty::PEN      # a penalty to add to param gradients
 end
@@ -114,7 +117,7 @@ function OnlineGAE{T}(A::AbstractSet,
     ϵ = zeros(T, np)
     ∇logP = zeros(T, np)
     params = consolidate_params(T, ϕ, critic_trans)
-    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, ∇logP, params, penalty)
+    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, ∇logP, zero(T), params, penalty)
 end
 
 # don't do anything here... we'll update during action
@@ -136,7 +139,8 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
 
     # update the critic
     transform!(π.critic, s′)
-    grad!(π.critic, r)
+    grad!(π.critic, π.lastr)
+    π.lastr = r
 
     #=
     update the actor using the OnlineGAE formulas:
@@ -148,7 +152,7 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
     on the next timestep
     =#
 
-    # we use last timestep's ∇logP to update the eligibility trace ϵ
+    # we use last timestep's ∇logP to update the eligibility trace of the last timestep ϵ
     γλ = π.γ * π.λ
     ϵ = π.ϵ
     for i=1:length(ϵ)
@@ -163,7 +167,7 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
     copy!(π.∇logP, grad(π.ϕ))
 
     # overwrite the gradient estimate: ĝ = δϵ
-    δ = π.critic.δ
+    δ = π.critic.lastδ
     ∇ = grad(π.ϕ)
     for i=1:length(ϵ)
         ∇[i] = δ * ϵ[i]

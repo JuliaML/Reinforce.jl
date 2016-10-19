@@ -125,6 +125,9 @@ function learn!(policy, ep::EpisodeLearner, i)
 	r, s′ = step!(env, s, a)
 	ep.total_reward += r
 
+    # TODO: should call some sort of SARS learn step for the policy... would simplify things
+    #   and ensure that the final reward is included in the learning
+
     ep.nsteps += 1
     for learner in ep.learners
         learn!(policy, learner, ep.nsteps)

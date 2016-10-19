@@ -80,13 +80,21 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
 
     # create a multivariate normal transformation with underlying params μ/σ
     μ = zeros(nA)
-    σ = zeros(nA)  # diagonal
+
+    # diagonal
+    σ = zeros(nA)
     D = MvNormalTransformation(μ, σ)
+    nϕ = 2nA
+
+    # # upper-triangular
+    # U = eye(nA,nA)
+    # D = MvNormalTransformation(μ, U)
+    # nϕ = nA*(nA+1)
+
     @show D
 
     # create a neural net mapping: s --> ϕ = vec(μ,U) of the MvNormal
-    nϕ = 2nA
-    nh = Int[10]
+    nh = Int[]
     ϕ = nnet(ns, nϕ, nh, :softplus, :identity)
     @show ϕ
 
@@ -99,37 +107,44 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     plt = plot(cp_ϕ.plt, cp_C.plt, layout=(2,1))
 
     # our discount rates # TODO: can we learn these too??
-    γ = 0.95
-    λ = 0.8
+    γ = 0.1
+    λ = 0.3
 
     # this is a stochastic policy which follows http://www.breloff.com/DeepRL-OnlineGAE/
     policy = OnlineGAE(A, ϕ, D, C, γ, λ,
-                       penalty = ElasticNetPenalty(5e-2,0.5)
+                       penalty = ElasticNetPenalty(1e-6,0.5)
                        )
 
     # this is our sub-learner to manage episode state
     episodes = EpisodeLearner(env,
-        MaxIter(2000),
-        IterFunction((m,i) -> begin
-            @show i, norm(params(policy)), norm(grad(policy))
-            update!(cp_ϕ)
-            update!(cp_C)
-            i==100 && gui()
-        end, 100)
+        MaxIter(4000),
+        # IterFunction((m,i) -> begin
+        #     @show i, norm(params(policy)), norm(grad(policy))
+        #     update!(cp_ϕ)
+        #     update!(cp_C)
+        #     i==500 && gui()
+        # end, 500)
     )
 
     # our main metalearner.
     #   stop after 500 total steps or 1 minute
     #   render the frame each iteration
     learner = make_learner(
-        GradientLearner(1e-2, Adamax()),
+        GradientLearner(1e-2, Adadelta()),
         episodes,
-        MaxIter(100000),
-        TimeLimit(180),
+        MaxIter(1000000),
+        # TimeLimit(180),
         IterFunction((m,i) -> begin
             if episodes.nepisode % 10 == 0 && episodes.nsteps % 5 == 0
                 OpenAIGym.render(env, i, nothing)
             end
+            if i%500==0
+                @show i, norm(params(policy)), norm(grad(policy))
+                update!(cp_ϕ)
+                update!(cp_C)
+                # i==500 && gui()
+            end
+            i%2000==0 && gui()
         end)
     )
 
