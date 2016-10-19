@@ -59,10 +59,10 @@ end
 function grad!(critic::ValueCritic, r::Number)
     Vs′ = output_value(critic.trans)[1]
     Vs = critic.lastv
-    critic.lastδ = critic.δ
+    # critic.lastδ = critic.δ
     critic.δ = r + critic.γ * Vs′ - Vs
     # @show critic.δ, r, critic.γ, Vs′, Vs
-    output_grad(critic.trans)[1] = -critic.lastδ
+    output_grad(critic.trans)[1] = -critic.δ
     critic.lastv = Vs′
     grad!(critic.trans)
 end
@@ -86,8 +86,10 @@ type OnlineGAE{T      <: Number,
                PHI    <: Learnable,
                DIST   <: MvNormalTransformation,
                CRITIC <: ValueCritic,
-               P      <: Params,
-               PEN    <: Penalty
+            #    P      <: Params,
+               PEN    <: Penalty,
+               AL     <: GradientLearner,
+               CL     <: GradientLearner
               } <: Learnable
     A::ASET           # the action space
     ϕ::PHI            # learnable transformation to output sufficient statistics of D
@@ -99,8 +101,10 @@ type OnlineGAE{T      <: Number,
     # t::Int            # current timestep
     ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
     lastr::T          # most recent return
-    params::P         # the combined parameters from the actor transformation ϕ and the critic transformation
+    # params::P         # the combined parameters from the actor transformation ϕ and the critic transformation
     penalty::PEN      # a penalty to add to param gradients
+    actor_learner::AL
+    critic_learner::CL
 end
 
 function OnlineGAE{T}(A::AbstractSet,
@@ -108,7 +112,9 @@ function OnlineGAE{T}(A::AbstractSet,
                       D::MvNormalTransformation,
                       critic_trans::Learnable,
                       γ::T,
-                      λ::T;
+                      λ::T,
+                      actor_learner::GradientLearner,
+                      critic_learner::GradientLearner;
                       penalty::Penalty = NoPenalty())
     # connect transformations, init the critic
     link_nodes!(ϕ, D)
@@ -116,15 +122,18 @@ function OnlineGAE{T}(A::AbstractSet,
     np = params_length(ϕ)
     ϵ = zeros(T, np)
     ∇logP = zeros(T, np)
-    params = consolidate_params(T, ϕ, critic_trans)
-    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, ∇logP, zero(T), params, penalty)
+    # params = consolidate_params(T, ϕ, critic_trans)
+    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, ∇logP, zero(T), penalty, actor_learner, critic_learner)
 end
 
-# don't do anything here... we'll update during action
+# don't do anything here... we'll update later
 LearnBase.update!(π::OnlineGAE, ::Void) = return
 
 function Reinforce.reset!{T}(π::OnlineGAE{T})
     fill!(π.ϵ, zero(T))
+    π.critic.lastv = 0
+    pre_hook(π.actor_learner, π.ϕ)
+    pre_hook(π.critic_learner, π.critic.trans)
 end
 
 function Reinforce.action(π::OnlineGAE, r, s′, A′)
@@ -134,13 +143,18 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
 
     # project our squashed sample onto into the action space to get our actions
     # a = (â --> [lo,hi])
-    a = A′.lo .+ logistic.(z) .* (A′.hi .- A′.lo)
-    # @show a
+    A′.lo .+ logistic.(z) .* (A′.hi .- A′.lo)
+end
 
+
+function learn!(π::OnlineGAE, s, a, r, s′)
     # update the critic
     transform!(π.critic, s′)
-    grad!(π.critic, π.lastr)
-    π.lastr = r
+    grad!(π.critic, r)
+    # π.lastr = r
+    t = π.critic.trans
+    addgrad!(grad(t), π.penalty, params(t))
+    learn!(t, π.critic_learner, nothing)
 
     #=
     update the actor using the OnlineGAE formulas:
@@ -152,29 +166,31 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
     on the next timestep
     =#
 
-    # we use last timestep's ∇logP to update the eligibility trace of the last timestep ϵ
-    γλ = π.γ * π.λ
-    ϵ = π.ϵ
-    for i=1:length(ϵ)
-        ϵ[i] = γλ * ϵ[i] + π.∇logP[i]
-    end
-
     # update the grad-log-prob of distribution D, and store that for the next timestep
     # NOTE: grad(π.ϕ) now contains the grad-log-prob of this timestep... but we don't use this
     #   until the next timestep
     grad!(π.D)
     grad!(π.ϕ)
-    copy!(π.∇logP, grad(π.ϕ))
 
-    # overwrite the gradient estimate: ĝ = δϵ
-    δ = π.critic.lastδ
+    # we use last timestep's ∇logP to update the eligibility trace of the last timestep ϵ
+    γλ = π.γ * π.λ
+    ϵ = π.ϵ
     ∇ = grad(π.ϕ)
     for i=1:length(ϵ)
-        ∇[i] = δ * ϵ[i]
+        ϵ[i] = γλ * ϵ[i] + ∇[i]
+    end
+
+    # copy!(π.∇logP, grad(π.ϕ))
+
+    # overwrite the gradient estimate: ĝ = δϵ
+    δ = π.critic.δ
+    for i=1:length(ϵ)
+        ∇[i] = -δ * ϵ[i]
     end
 
     # add the penalty to the gradient
-    addgrad!(π.params.∇, π.penalty, π.params.θ)
+    addgrad!(∇, π.penalty, params(π.ϕ))
 
-    a
+    # learn the actor
+    learn!(π.ϕ, π.actor_learner, nothing)
 end

@@ -100,20 +100,26 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
 
     # the critic's value function... mapping state to value
     C = nnet(ns, 1, nh, :softplus, :identity)
+    @show C
 
     # chainplots... put one for each of ϕ/C side-by-side
     cp_ϕ = ChainPlot(ϕ)
     cp_C = ChainPlot(C)
-    plt = plot(cp_ϕ.plt, cp_C.plt, layout=(2,1))
+    hm1 = spy(ones(nA,1))
+    hm2 = spy(UpperTriangular(ones(nA,nA)))
+    # heatmaps = plot(hm1,hm2,layout=grid(1,2,widths=[1/(nA+1),nA/(nA+1)]))
+    # plt = plot(cp_ϕ.plt, cp_C.plt, heatmaps, layout=grid(3,1,heights=[.4,.4,.2]))
 
     # our discount rates # TODO: can we learn these too??
     γ = 0.1
-    λ = 0.3
+    λ = 5.0
 
     # this is a stochastic policy which follows http://www.breloff.com/DeepRL-OnlineGAE/
     policy = OnlineGAE(A, ϕ, D, C, γ, λ,
-                       penalty = ElasticNetPenalty(1e-6,0.5)
-                       )
+                       GradientLearner(1e-2, Adadelta()),
+                       GradientLearner(1e-1, Adadelta()),
+                       penalty = ElasticNetPenalty(1e-4,0.5)
+                      )
 
     # this is our sub-learner to manage episode state
     episodes = EpisodeLearner(env,
@@ -130,7 +136,7 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     #   stop after 500 total steps or 1 minute
     #   render the frame each iteration
     learner = make_learner(
-        GradientLearner(1e-2, Adadelta()),
+        # GradientLearner(1e-2, Adadelta()),
         episodes,
         MaxIter(1000000),
         # TimeLimit(180),
@@ -139,9 +145,16 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
                 OpenAIGym.render(env, i, nothing)
             end
             if i%500==0
-                @show i, norm(params(policy)), norm(grad(policy))
+                # @show i, norm(params(policy)), norm(grad(policy))
+                @show i, episodes.total_reward
                 update!(cp_ϕ)
                 update!(cp_C)
+                hm1 = heatmap(reshape(D.dist.μ,nA,1), yflip=true, title="mu, zlim=$(extrema(D.dist.μ))")
+                # Σ = UpperTriangular(D.dist.Σ.chol.factors)
+                Σ = Diagonal(D.dist.Σ.diag)
+                hm2 = heatmap(Σ, yflip=true, title="Sigma, zlim=$(extrema(Σ))")
+                heatmaps = plot(hm1,hm2,layout=grid(1,2,widths=[1/(nA+1),nA/(nA+1)]))
+                plot(cp_ϕ.plt, cp_C.plt, heatmaps, layout=grid(3,1,heights=[.4,.4,.2]))
                 # i==500 && gui()
             end
             i%2000==0 && gui()
