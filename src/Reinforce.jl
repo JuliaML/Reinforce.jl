@@ -36,8 +36,8 @@ export
 	state!,
 
 	Episode,
-    EpisodeLearner,
-	episode!
+    Episodes
+	# episode!
 
 
 # ----------------------------------------------------------------
@@ -111,7 +111,8 @@ function action end
 # ----------------------------------------------------------------
 # concrete implementations
 
-include("episodes.jl")
+# include("episodes.jl")
+include("episodes/iterators.jl")
 include("states.jl")
 include("policy.jl")
 include("solvers.jl")

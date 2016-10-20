@@ -42,11 +42,11 @@ type ValueCritic{T,TRANS<:Learnable} <: Learnable
     γ::T            # discount
     lastv::T       # V(s)
     δ::T          # TD(0) delta: δ = r + γV(s′) - V(s)
-    lastδ::T
+    # lastδ::T
 end
 
 function ValueCritic{T}(::Type{T}, trans::Learnable, γ::T)
-    ValueCritic{T,typeof(trans)}(trans, γ, zero(T), zero(T), zero(T))
+    ValueCritic{T,typeof(trans)}(trans, γ, zero(T), zero(T))
 end
 
 function transform!(critic::ValueCritic, s::AbstractArray)
@@ -99,8 +99,8 @@ type OnlineGAE{T      <: Number,
     λ::T              # the extra discount for the actor
     ϵ::Vector{T}      # eligibility traces for the learnable params θ in transformation ϕ
     # t::Int            # current timestep
-    ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
-    lastr::T          # most recent return
+    # ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
+    # lastr::T          # most recent return
     # params::P         # the combined parameters from the actor transformation ϕ and the critic transformation
     penalty::PEN      # a penalty to add to param gradients
     actor_learner::AL
@@ -121,9 +121,9 @@ function OnlineGAE{T}(A::AbstractSet,
     critic = ValueCritic(T, critic_trans, γ)
     np = params_length(ϕ)
     ϵ = zeros(T, np)
-    ∇logP = zeros(T, np)
+    # ∇logP = zeros(T, np)
     # params = consolidate_params(T, ϕ, critic_trans)
-    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, ∇logP, zero(T), penalty, actor_learner, critic_learner)
+    OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, penalty, actor_learner, critic_learner)
 end
 
 # don't do anything here... we'll update later
@@ -154,6 +154,7 @@ function learn!(π::OnlineGAE, s, a, r, s′)
     # π.lastr = r
     t = π.critic.trans
     addgrad!(grad(t), π.penalty, params(t))
+    
     learn!(t, π.critic_learner, nothing)
 
     #=

@@ -81,26 +81,40 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     # create a multivariate normal transformation with underlying params μ/σ
     μ = zeros(nA)
 
-    # diagonal
-    σ = zeros(nA)
-    D = MvNormalTransformation(μ, σ)
-    nϕ = 2nA
+    # # diagonal
+    # σ = zeros(nA)
+    # D = MvNormalTransformation(μ, σ)
+    # nϕ = 2nA
 
-    # # upper-triangular
-    # U = eye(nA,nA)
-    # D = MvNormalTransformation(μ, U)
-    # nϕ = nA*(nA+1)
+    # upper-triangular
+    U = eye(nA,nA)
+    D = MvNormalTransformation(μ, U)
+    nϕ = nA*(nA+1)
 
     @show D
 
     # create a neural net mapping: s --> ϕ = vec(μ,U) of the MvNormal
-    nh = Int[]
+    nh = Int[20]
     ϕ = nnet(ns, nϕ, nh, :softplus, :identity)
     @show ϕ
 
     # the critic's value function... mapping state to value
     C = nnet(ns, 1, nh, :softplus, :identity)
     @show C
+
+    # our discount rates # TODO: can we learn these too??
+    γ = 0.2
+    λ = 0.6
+
+    # this is a stochastic policy which follows http://www.breloff.com/DeepRL-OnlineGAE/
+    policy = OnlineGAE(A, ϕ, D, C, γ, λ,
+                       GradientLearner(0.1, Adamax()),
+                       GradientLearner(0.1, Adamax()),
+                       penalty = ElasticNetPenalty(1e-5,0.5)
+                      )
+
+    # --------------------------------
+    # set up the custom visualizations
 
     # chainplots... put one for each of ϕ/C side-by-side
     cp_ϕ = ChainPlot(ϕ)
@@ -109,60 +123,40 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     hm2 = spy(UpperTriangular(ones(nA,nA)))
     # heatmaps = plot(hm1,hm2,layout=grid(1,2,widths=[1/(nA+1),nA/(nA+1)]))
     # plt = plot(cp_ϕ.plt, cp_C.plt, heatmaps, layout=grid(3,1,heights=[.4,.4,.2]))
+    # avgrw =
 
-    # our discount rates # TODO: can we learn these too??
-    γ = 0.1
-    λ = 5.0
+    # this will be called on every timestep of every episode
+    function eachiteration(ep,i)
+        @show i, ep.total_reward
+        update!(cp_ϕ)
+        update!(cp_C)
+        hm1 = heatmap(reshape(D.dist.μ,nA,1), yflip=true,
+                    title=string(maximum(D.dist.μ)),
+                    xguide=string(minimum(D.dist.μ)),
+                    left_margin=150px)
+        Σ = UpperTriangular(D.dist.Σ.chol.factors)
+        # Σ = Diagonal(D.dist.Σ.diag)
+        hm2 = heatmap(Σ, yflip=true,
+                    title=string(maximum(Σ)),
+                    xguide=string(minimum(Σ)))
+        plot(cp_ϕ.plt, cp_C.plt, hm1, hm2, layout = @layout([ϕ; C; hm1{0.2w,0.2h} hm2]))
+        # i%2000==0 && gui()
+        gui()
+    end
 
-    # this is a stochastic policy which follows http://www.breloff.com/DeepRL-OnlineGAE/
-    policy = OnlineGAE(A, ϕ, D, C, γ, λ,
-                       GradientLearner(1e-2, Adadelta()),
-                       GradientLearner(1e-1, Adadelta()),
-                       penalty = ElasticNetPenalty(1e-4,0.5)
-                      )
+    function renderfunc(ep,i)
+        if mod1(ep.niter, 5) == 1
+            OpenAIGym.render(env, ep.niter, nothing)
+        end
+    end
 
-    # this is our sub-learner to manage episode state
-    episodes = EpisodeLearner(env,
-        MaxIter(4000),
-        # IterFunction((m,i) -> begin
-        #     @show i, norm(params(policy)), norm(grad(policy))
-        #     update!(cp_ϕ)
-        #     update!(cp_C)
-        #     i==500 && gui()
-        # end, 500)
-    )
 
-    # our main metalearner.
-    #   stop after 500 total steps or 1 minute
-    #   render the frame each iteration
-    learner = make_learner(
-        # GradientLearner(1e-2, Adadelta()),
-        episodes,
-        MaxIter(1000000),
-        # TimeLimit(180),
-        IterFunction((m,i) -> begin
-            if episodes.nepisode % 10 == 0 && episodes.nsteps % 5 == 0
-                OpenAIGym.render(env, i, nothing)
-            end
-            if i%500==0
-                # @show i, norm(params(policy)), norm(grad(policy))
-                @show i, episodes.total_reward
-                update!(cp_ϕ)
-                update!(cp_C)
-                hm1 = heatmap(reshape(D.dist.μ,nA,1), yflip=true, title="mu, zlim=$(extrema(D.dist.μ))")
-                # Σ = UpperTriangular(D.dist.Σ.chol.factors)
-                Σ = Diagonal(D.dist.Σ.diag)
-                hm2 = heatmap(Σ, yflip=true, title="Sigma, zlim=$(extrema(Σ))")
-                heatmaps = plot(hm1,hm2,layout=grid(1,2,widths=[1/(nA+1),nA/(nA+1)]))
-                plot(cp_ϕ.plt, cp_C.plt, heatmaps, layout=grid(3,1,heights=[.4,.4,.2]))
-                # i==500 && gui()
-            end
-            i%2000==0 && gui()
-        end)
-    )
-
-    # our metalearner will infinitely take a step in an episode,
-    learn!(policy, learner)
+    learn!(policy, Episodes(
+        env,
+        episode_strats = [MaxIter(1000)],
+        epoch_strats = [MaxIter(5000), IterFunction(renderfunc, every=3)],
+        iter_strats = [IterFunction(eachiteration, every=100)]
+    ))
 
     env, policy
 end
