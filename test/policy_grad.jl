@@ -145,7 +145,7 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     end
 
     function renderfunc(ep,i)
-        if mod1(ep.niter, 5) == 1
+        if mod1(ep.niter, 10) == 1
             OpenAIGym.render(env, ep.niter, nothing)
         end
     end
@@ -154,8 +154,8 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     learn!(policy, Episodes(
         env,
         episode_strats = [MaxIter(1000)],
-        epoch_strats = [MaxIter(5000), IterFunction(renderfunc, every=3)],
-        iter_strats = [IterFunction(eachiteration, every=100)]
+        epoch_strats = [MaxIter(5000), IterFunction(renderfunc, every=5)],
+        iter_strats = [IterFunction(eachiteration, every=1000)]
     ))
 
     env, policy
