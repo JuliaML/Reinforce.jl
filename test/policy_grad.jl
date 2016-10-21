@@ -10,7 +10,7 @@ using Transformations
 using StochasticOptimization
 using Penalties
 
-using MLPlots; gr(size=(1000,1000))
+using MLPlots; gr(size=(1400,1400))
 
 # ----------------------------------------------------------------
 
@@ -60,6 +60,9 @@ using MLPlots; gr(size=(1000,1000))
 # # 	Transformations.sigmoid(transform(π.trans, s)[1]) * (A.amax-A.amin) + A.amin
 # # end
 
+# type Critic
+#     return_func::Function
+#     baseline_func::Function
 
 # ----------------------------------------------------------------
 
@@ -81,36 +84,37 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     # create a multivariate normal transformation with underlying params μ/σ
     μ = zeros(nA)
 
-    # # diagonal
-    # σ = zeros(nA)
-    # D = MvNormalTransformation(μ, σ)
-    # nϕ = 2nA
+    # diagonal
+    σ = zeros(nA)
+    D = MvNormalTransformation(μ, σ)
+    nϕ = 2nA
 
-    # upper-triangular
-    U = eye(nA,nA)
-    D = MvNormalTransformation(μ, U)
-    nϕ = nA*(nA+1)
+    # # upper-triangular
+    # U = eye(nA,nA)
+    # D = MvNormalTransformation(μ, U)
+    # nϕ = nA*(nA+1)
 
     @show D
 
     # create a neural net mapping: s --> ϕ = vec(μ,U) of the MvNormal
-    nh = Int[20]
-    ϕ = nnet(ns, nϕ, nh, :softplus, :identity)
+    nh = Int[30,20]
+    ϕ = nnet(ns, nϕ, nh, :relu, :identity)
     @show ϕ
 
     # the critic's value function... mapping state to value
-    C = nnet(ns, 1, nh, :softplus, :identity)
+    C = nnet(ns, 1, nh, :relu, :identity)
     @show C
 
     # our discount rates # TODO: can we learn these too??
-    γ = 0.2
+    γ = 0.9
     λ = 0.6
 
     # this is a stochastic policy which follows http://www.breloff.com/DeepRL-OnlineGAE/
     policy = OnlineGAE(A, ϕ, D, C, γ, λ,
-                       GradientLearner(0.1, Adamax()),
-                       GradientLearner(0.1, Adamax()),
-                       penalty = ElasticNetPenalty(1e-5,0.5)
+                       OnlineGradAvg(400, lr=0.1, pu=Adadelta()),
+                       OnlineGradAvg(200, lr=0.1, pu=Adadelta()),
+                    #    penalty = ElasticNetPenalty(1e-1,0.5)
+                        penalty = L2Penalty(1e-4)
                       )
 
     # --------------------------------
@@ -119,11 +123,6 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
     # chainplots... put one for each of ϕ/C side-by-side
     cp_ϕ = ChainPlot(ϕ)
     cp_C = ChainPlot(C)
-    hm1 = spy(ones(nA,1))
-    hm2 = spy(UpperTriangular(ones(nA,nA)))
-    # heatmaps = plot(hm1,hm2,layout=grid(1,2,widths=[1/(nA+1),nA/(nA+1)]))
-    # plt = plot(cp_ϕ.plt, cp_C.plt, heatmaps, layout=grid(3,1,heights=[.4,.4,.2]))
-    # avgrw =
 
     # this will be called on every timestep of every episode
     function eachiteration(ep,i)
@@ -134,8 +133,9 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
                     title=string(maximum(D.dist.μ)),
                     xguide=string(minimum(D.dist.μ)),
                     left_margin=150px)
-        Σ = UpperTriangular(D.dist.Σ.chol.factors)
+        # Σ = UpperTriangular(D.dist.Σ.chol.factors)
         # Σ = Diagonal(D.dist.Σ.diag)
+        Σ = Diagonal(abs.(output_value(ϕ)[nA+1:end]))
         hm2 = heatmap(Σ, yflip=true,
                     title=string(maximum(Σ)),
                     xguide=string(minimum(Σ)))
@@ -153,6 +153,7 @@ function doit(sublearners...; env = GymEnv("BipedalWalker-v2"),
 
     learn!(policy, Episodes(
         env,
+        freq = 5,
         episode_strats = [MaxIter(1000)],
         epoch_strats = [MaxIter(5000), IterFunction(renderfunc, every=5)],
         iter_strats = [IterFunction(eachiteration, every=1000)]

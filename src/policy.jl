@@ -49,21 +49,33 @@ function ValueCritic{T}(::Type{T}, trans::Learnable, γ::T)
     ValueCritic{T,typeof(trans)}(trans, γ, zero(T), zero(T))
 end
 
-function transform!(critic::ValueCritic, s::AbstractArray)
-    # critic.lastv = output_value(critic.trans)[1]
-    transform!(critic.trans, s)
-end
+# function transform!(critic::ValueCritic, s::AbstractArray)
+#     # critic.lastv = output_value(critic.trans)[1]
+#     transform!(critic.trans, s)
+# end
 
 # give reward r, compute output grad: δ = r + γV(s′) - V(s)
 # then backprop to get ∇θ
-function grad!(critic::ValueCritic, r::Number)
+function grad!{T}(critic::ValueCritic{T}, r::Number)
     Vs′ = output_value(critic.trans)[1]
     Vs = critic.lastv
     # critic.lastδ = critic.δ
+
+    # the loss function is L2 loss with "truth" (r+λVₛ′) and "estimate" Vₛ
+    # the output gradient is:
+    #   ∂(δ²/2)/∂Vₛ′
+
+    # this is the discounted return δ:
     critic.δ = r + critic.γ * Vs′ - Vs
-    # @show critic.δ, r, critic.γ, Vs′, Vs
     output_grad(critic.trans)[1] = -critic.δ
-    critic.lastv = Vs′
+    # output_grad(critic.trans)[1] = -critic.γ * critic.δ
+
+    # # this tries to solve for the average future reward
+    # critic.δ = critic.γ * r + (one(T) - critic.γ) * Vs′ - Vs
+    # output_grad(critic.trans)[1] = -critic.γ * critic.δ
+
+
+    # critic.lastv = Vs′
     grad!(critic.trans)
 end
 
@@ -88,8 +100,8 @@ type OnlineGAE{T      <: Number,
                CRITIC <: ValueCritic,
             #    P      <: Params,
                PEN    <: Penalty,
-               AL     <: GradientLearner,
-               CL     <: GradientLearner
+               AL     <: LearningStrategy,
+               CL     <: LearningStrategy
               } <: Learnable
     A::ASET           # the action space
     ϕ::PHI            # learnable transformation to output sufficient statistics of D
@@ -98,6 +110,7 @@ type OnlineGAE{T      <: Number,
     γ::T              # the discount for the critic
     λ::T              # the extra discount for the actor
     ϵ::Vector{T}      # eligibility traces for the learnable params θ in transformation ϕ
+    # a::Vector{T}      # the action
     # t::Int            # current timestep
     # ∇logP::Vector{T}  # policy gradient: ∇log P(a | s) == ∇log P(z | ϕ)
     # lastr::T          # most recent return
@@ -113,8 +126,8 @@ function OnlineGAE{T}(A::AbstractSet,
                       critic_trans::Learnable,
                       γ::T,
                       λ::T,
-                      actor_learner::GradientLearner,
-                      critic_learner::GradientLearner;
+                      actor_learner::LearningStrategy,
+                      critic_learner::LearningStrategy;
                       penalty::Penalty = NoPenalty())
     # connect transformations, init the critic
     link_nodes!(ϕ, D)
@@ -123,6 +136,8 @@ function OnlineGAE{T}(A::AbstractSet,
     ϵ = zeros(T, np)
     # ∇logP = zeros(T, np)
     # params = consolidate_params(T, ϕ, critic_trans)
+    pre_hook(actor_learner, ϕ)
+    pre_hook(critic_learner, critic.trans)
     OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, penalty, actor_learner, critic_learner)
 end
 
@@ -131,9 +146,9 @@ LearnBase.update!(π::OnlineGAE, ::Void) = return
 
 function Reinforce.reset!{T}(π::OnlineGAE{T})
     fill!(π.ϵ, zero(T))
-    π.critic.lastv = 0
-    pre_hook(π.actor_learner, π.ϕ)
-    pre_hook(π.critic_learner, π.critic.trans)
+    # π.critic.lastv = 0
+    # pre_hook(π.actor_learner, π.ϕ)
+    # pre_hook(π.critic_learner, π.critic.trans)
 end
 
 function Reinforce.action(π::OnlineGAE, r, s′, A′)
@@ -143,18 +158,25 @@ function Reinforce.action(π::OnlineGAE, r, s′, A′)
 
     # project our squashed sample onto into the action space to get our actions
     # a = (â --> [lo,hi])
-    A′.lo .+ logistic.(z) .* (A′.hi .- A′.lo)
+    a = A′.lo .+ logistic.(z) .* (A′.hi .- A′.lo)
+    if !(a in A′)
+        warn("a=$a not in A=$(A′)")
+        a = rand(A′)
+    end
+    a
 end
 
 
 function learn!(π::OnlineGAE, s, a, r, s′)
-    # update the critic
-    transform!(π.critic, s′)
+    # update the critic.  we use the current model to get the lastv == Vₛ
+    # as well as the current == Vₛ′
+    π.critic.lastv = transform!(π.critic.trans, s)[1]
+    transform!(π.critic.trans, s′)
     grad!(π.critic, r)
     # π.lastr = r
     t = π.critic.trans
     addgrad!(grad(t), π.penalty, params(t))
-    
+
     learn!(t, π.critic_learner, nothing)
 
     #=
@@ -177,6 +199,7 @@ function learn!(π::OnlineGAE, s, a, r, s′)
     γλ = π.γ * π.λ
     ϵ = π.ϵ
     ∇ = grad(π.ϕ)
+    addgrad!(∇, π.penalty, params(π.ϕ))
     for i=1:length(ϵ)
         ϵ[i] = γλ * ϵ[i] + ∇[i]
     end
@@ -189,8 +212,8 @@ function learn!(π::OnlineGAE, s, a, r, s′)
         ∇[i] = -δ * ϵ[i]
     end
 
-    # add the penalty to the gradient
-    addgrad!(∇, π.penalty, params(π.ϕ))
+    # # add the penalty to the gradient
+    # addgrad!(∇, π.penalty, params(π.ϕ))
 
     # learn the actor
     learn!(π.ϕ, π.actor_learner, nothing)

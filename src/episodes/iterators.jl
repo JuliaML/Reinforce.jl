@@ -3,11 +3,13 @@ type Episode
     env
     policy
     total_reward::Float64   # total reward of the episode
+    last_reward::Float64
     niter::Int             # current step in this episode
+    freq::Int               # number of steps between choosing actions
     # should_reset::Bool      # should we reset the episode on the next call?
     # strats                  # learning strategies (MaxIter, TimeLimit, etc)
 end
-Episode(env, policy, strats = []) = Episode(env, policy, 0.0, 1)
+Episode(env, policy; freq=1) = Episode(env, policy, 0.0, 0.0, 1, freq)
 
 function Base.start(ep::Episode)
     reset!(ep.env)
@@ -32,9 +34,20 @@ function Base.next(ep::Episode, i)
         # a = rand(A)
     end
     @assert a in A
-	r, s′ = step!(env, s, a)
-	ep.total_reward += r
-    ep.niter = i
+
+    # take freq steps using action a
+    last_reward = 0.0
+    s′ = s
+    for i=1:ep.freq
+        r, s′ = step!(env, s′, a)
+        last_reward += r
+        ep.niter += 1
+        done(ep, ep.niter) && break
+    end
+
+    ep.total_reward += last_reward
+    ep.last_reward = last_reward
+    # ep.niter = i
 
 	(s, a, r, s′), i+1
 end
@@ -44,6 +57,7 @@ end
 
 type Episodes
     env
+    kw
 
     # note: we have different groups of strategies depending on when they should be applied
     episode_strats    # learning strategies for each episode
@@ -54,9 +68,11 @@ end
 function Episodes(env;
                   episode_strats = [],
                   epoch_strats = [],
-                  iter_strats = [])
+                  iter_strats = [],
+                  kw...)
     Episodes(
         env,
+        kw,
         MetaLearner(episode_strats...),
         MetaLearner(epoch_strats...),
         MetaLearner(iter_strats...)
@@ -77,8 +93,8 @@ function learn!(policy, eps::Episodes)
 
         # one episode
         pre_hook(eps.episode_strats, policy)
-        ep = Episode(eps.env, policy)
-        for (timestep, sars′) in enumerate(ep)
+        ep = Episode(eps.env, policy; eps.kw...)
+        for sars′ in ep
             learn!(policy, sars′...)
 
             # learn steps
@@ -92,6 +108,7 @@ function learn!(policy, eps::Episodes)
             # learn!(policy, eps.iter_strats, sars′)
 
             # iter steps
+            timestep = ep.niter
             iter_hook(eps.episode_strats, ep, timestep)
             iter_hook(eps.epoch_strats, ep, epoch)
             iter_hook(eps.iter_strats, ep, iter)
