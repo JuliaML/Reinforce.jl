@@ -114,7 +114,7 @@ function action end
 # include("episodes.jl")
 include("episodes/iterators.jl")
 include("states.jl")
-include("policy.jl")
+include("policies/policies.jl")
 include("solvers.jl")
 
 include("envs/cartpole.jl")
