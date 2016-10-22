@@ -28,6 +28,7 @@ export
 	AbstractPolicy,
 	RandomPolicy,
     OnlineGAE,
+    ActorCritic,
 	action,
 
 	AbstractState,

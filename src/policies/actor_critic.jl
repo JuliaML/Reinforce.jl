@@ -12,8 +12,8 @@ type ActorCritic{T, U<:Learnable, DIST<:MvNormalTransformation} <: AbstractPolic
     x::Function    # a "feature mapping" function x(s)
     v::Vector{T}   # critic params
     eᵛ::Vector{T}  # eligibility trace for updating v (critic params)
-    # u::Vector{T}   # actor params
-    u::Learnable   # u from the paper is really params(u), ∇logP is grad(u)
+    # u::Vector{T}  # actor params
+    u::U           # u from the paper is really params(u), ∇logP is grad(u)
     D::DIST        # the N(u) = N(μ,σ) from which we sample actions
     # ∇logP::Vector{T} # grad-log-prob of the policy distribution N(u) = N(μ,σ)
     eᵘ::Vector{T}  # eligibility trace for updating u (actor params)
@@ -26,7 +26,7 @@ end
 
 function ActorCritic(s::AbstractVector, na::Int;
                      T::DataType = eltype(s),
-                     u::Learnable = Affine{T}(length(s), 2na),
+                     u::Learnable = nnet(length(s), 2na, [], :relu),
                      D::MvNormalTransformation = MvNormalTransformation(zeros(T,na),zeros(T,na)),
                      x::Function = identity,
                      γ::Number = 1.0,
@@ -67,7 +67,7 @@ end
 
 function Reinforce.action(ac::ActorCritic, r, s′, A′)
     transform!(ac.u, s′)
-    z = transform!(π.D)
+    z = transform!(ac.D)
 
     # TODO: make this a general utility method... project_to_actions?
     # project our squashed sample onto into the action space to get our actions
@@ -88,15 +88,34 @@ end
 function learn!(ac::ActorCritic, s, a, r, s′)
     x = ac.x(s)
     x′ = ac.x(s′)
-    δ = r - ac.r̄ + ac.γ * dot(ac.v, x′) - dot(ac.v, x)
-    ac.r̄ += ac.αʳ * δ
-    γλ = ac.γ * ac.λ
-    ac.eᵛ .= γλ .* ac.eᵛ .+ x
-    ac.v .+= (αᵛ * δ) .* ac.eᵛ
 
+    # compute TD delta
+    δ = r - ac.r̄ + ac.γ * dot(ac.v, x′) - dot(ac.v, x)
+
+    # update average reward
+    ac.r̄ += ac.αʳ * δ
+
+    # update critic
+    γλ = ac.γ * ac.λ
+    for i=1:ac.nv
+        ac.eᵛ[i] = γλ * ac.eᵛ[i] + x[i]
+        ac.v[i] += ac.αᵛ * δ * ac.eᵛ[i]
+    end
+    # ac.eᵛ .= γλ .* ac.eᵛ .+ x
+    # ac.v .+= (αᵛ * δ) .* ac.eᵛ
+
+    # compute ∇logP
     # TODO: add penalty?
     grad!(ac.D)
     grad!(ac.u)
-    ac.eᵘ .= γλ .* ac.eᵘ .+ grad(ac.u)
-    params(ac.u) .+= (αᵘ * δ) .* ac.eᵘ
+
+    # update actor
+    Θ = params(ac.u)
+    ∇logP = grad(ac.u)
+    for i=1:ac.nu
+        ac.eᵘ[i] = γλ * ac.eᵘ[i] + ∇logP[i]
+        Θ[i] += ac.αᵘ * δ * ac.eᵘ[i]
+    end
+    # ac.eᵘ .= γλ .* ac.eᵘ .+ grad(ac.u)
+    # params(ac.u) .+= (αᵘ * δ) .* ac.eᵘ
 end

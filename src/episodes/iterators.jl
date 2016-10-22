@@ -41,13 +41,13 @@ function Base.next(ep::Episode, i)
     for i=1:ep.freq
         r, s′ = step!(env, s′, a)
         last_reward += r
-        ep.niter += 1
+        # ep.niter += 1
         done(ep, ep.niter) && break
     end
 
     ep.total_reward += last_reward
     ep.last_reward = last_reward
-    # ep.niter = i
+    ep.niter = i
 
 	(s, a, r, s′), i+1
 end
