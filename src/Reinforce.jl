@@ -13,6 +13,7 @@ using RecipesBase
 using StochasticOptimization
 using Transformations
 using Penalties
+import OnlineStats: Mean, Variances, Weight, BoundedEqualWeight
 
 import LearnBase: learn!, transform!, grad!
 import StochasticOptimization: pre_hook, iter_hook, finished, post_hook

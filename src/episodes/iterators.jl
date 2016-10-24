@@ -38,7 +38,7 @@ function Base.next(ep::Episode, i)
     # take freq steps using action a
     last_reward = 0.0
     s′ = s
-    for i=1:ep.freq
+    for _=1:ep.freq
         r, s′ = step!(env, s′, a)
         last_reward += r
         # ep.niter += 1
