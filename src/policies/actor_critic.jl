@@ -83,39 +83,37 @@ end
 
 #= Notes:
     - we can replace αᵛ/αᵘ with a GradientLearner and call update! instead
+    - the @with macro (in StochasticOptimization) replaces variables with the
+        dot versions if that object has a field of that name
 =#
 
-function learn!(ac::ActorCritic, s, a, r, s′)
-    x = ac.x(s)
-    x′ = ac.x(s′)
+@with ac function learn!(ac::ActorCritic, s, a, r, s′)
+    xs = x(s)
+    xs′ = x(s′)
 
     # compute TD delta
-    δ = r - ac.r̄ + ac.γ * dot(ac.v, x′) - dot(ac.v, x)
+    δ = r - r̄ + γ * dot(v, xs′) - dot(v, xs)
 
     # update average reward
-    ac.r̄ += ac.αʳ * δ
+    r̄ += αʳ * δ
 
     # update critic
-    γλ = ac.γ * ac.λ
-    for i=1:ac.nv
-        ac.eᵛ[i] = γλ * ac.eᵛ[i] + x[i]
-        ac.v[i] += ac.αᵛ * δ * ac.eᵛ[i]
+    γλ = γ * λ
+    for i=1:nv
+        eᵛ[i] = γλ * eᵛ[i] + xs[i]
+        v[i] += αᵛ * δ * eᵛ[i]
     end
-    # ac.eᵛ .= γλ .* ac.eᵛ .+ x
-    # ac.v .+= (αᵛ * δ) .* ac.eᵛ
 
     # compute ∇logP
     # TODO: add penalty?
-    grad!(ac.D)
-    grad!(ac.u)
+    grad!(D)
+    grad!(u)
 
     # update actor
-    Θ = params(ac.u)
-    ∇logP = grad(ac.u)
-    for i=1:ac.nu
-        ac.eᵘ[i] = γλ * ac.eᵘ[i] + ∇logP[i]
-        Θ[i] += ac.αᵘ * δ * ac.eᵘ[i]
+    Θ = params(u)
+    ∇logP = grad(u)
+    for i=1:nu
+        eᵘ[i] = γλ * eᵘ[i] + ∇logP[i]
+        Θ[i] += αᵘ * δ * eᵘ[i]
     end
-    # ac.eᵘ .= γλ .* ac.eᵘ .+ grad(ac.u)
-    # params(ac.u) .+= (αᵘ * δ) .* ac.eᵘ
 end
