@@ -22,7 +22,12 @@ function doit(env = GymEnv("BipedalWalker-v2"))
     nA = length(A)
     @show s ns
 
-    policy = ActorCritic(s, nA, γ = 0.9, λ = 0.6)
+    policy = ActorCritic(s, nA,
+        γ = 0.9,
+        λ = 0.6,
+        αᵛ = 0.3,
+        αᵘ = 0.1,
+    )
 
     # --------------------------------
     # set up the custom visualizations
