@@ -22,22 +22,26 @@ function doit(env = GymEnv("BipedalWalker-v2"))
     nA = length(A)
     @show s ns
 
-    policy = ActorCritic(s, nA,
+    policy = OnlineActorCritic(s, nA,
         # algo = :INAC,
-        penalty = L2Penalty(1e-4),
-        γ = 0.5,
-        λ = 0.5,
+        ϕ = nnet(2ns, 2nA, [30], :softplus),
+        penalty = L2Penalty(1e-6),
+        γ = 0.995,
+        λ = 0.97,
         # αʳ = 0.0001,
-        αᵛ = 0.05,
-        αᵘ = 0.01,
+        # αᵛ = 0.01,
+        # αᵘ = 0.01,
+        gaᵛ = OnlineGradAvg(50, lr=0.5, pu=RMSProp()),
+        gaᵘ = OnlineGradAvg(50, lr=0.5, pu=RMSProp()),
+        # gaʷ = OnlineGradAvg(50, lr=0.5, pu=Adamax())
     )
 
     # --------------------------------
     # set up the custom visualizations
 
     # chainplots... put one for each of ϕ/C side-by-side
-    ϕ = policy.ϕ
-    D = policy.D
+    ϕ = policy.actor.ϕ
+    D = policy.actor.D
 
     cp_ϕ = ChainPlot(ϕ)
     # nϕplts = length(cp_ϕ.plt.subplots)
@@ -105,10 +109,11 @@ function doit(env = GymEnv("BipedalWalker-v2"))
 
     learn!(policy, Episodes(
         env,
-        freq = 2,
-        episode_strats = [MaxIter(500)],
-        epoch_strats = [MaxIter(5000), IterFunction(renderfunc, every=3)],
-        iter_strats = [IterFunction(eachiteration, every=500)]
+        freq = 1,
+        episode_strats = [MaxIter(1000)],
+        epoch_strats = [MaxIter(10000), IterFunction(renderfunc, every=5)],
+        iter_strats = [IterFunction(eachiteration, every=1000)]
+        # append_action = true
     ))
 
     env, policy

@@ -6,10 +6,17 @@ type Episode
     last_reward::Float64
     niter::Int             # current step in this episode
     freq::Int               # number of steps between choosing actions
-    # should_reset::Bool      # should we reset the episode on the next call?
-    # strats                  # learning strategies (MaxIter, TimeLimit, etc)
+    # append_action::Bool
+    # last_action
 end
-Episode(env, policy; freq=1) = Episode(env, policy, 0.0, 0.0, 1, freq)
+
+function Episode(env, policy; freq=1) #, append_action=false)
+    Episode(env, policy,
+        0.0, 0.0, 1, freq,
+        # append_action,
+        # append_action ? rand(actions(env, state(env))) : zeros(0)
+    )
+end
 
 function Base.start(ep::Episode)
     reset!(ep.env)
@@ -28,6 +35,7 @@ function Base.next(ep::Episode, i)
 	s = state(env)
     A = actions(env, s)
     r = reward(env)
+	# a = action(ep.policy, r, ep.append_action ? vcat(s,ep.last_action) : s, A)
 	a = action(ep.policy, r, s, A)
     if !(a in A)
         warn("action $a is not in $A")
@@ -41,13 +49,18 @@ function Base.next(ep::Episode, i)
     for _=1:ep.freq
         r, s′ = step!(env, s′, a)
         last_reward += r
-        # ep.niter += 1
         done(ep, ep.niter) && break
     end
 
     ep.total_reward += last_reward
     ep.last_reward = last_reward
     ep.niter = i
+
+    # if ep.append_action
+    #     s = vcat(s, ep.last_action)
+    #     s′ = vcat(s′, a)
+    #     ep.last_action = a
+    # end
 
 	(s, a, r, s′), i+1
 end
@@ -79,11 +92,13 @@ function Episodes(env;
     )
 end
 
+length_state(eps::Episodes) = length(state(eps.env)) + length(eps.last_action)
+
 # the main function... run episodes until stopped by one of the epoch/iter strats
-function learn!(policy, eps::Episodes)
+@with eps function learn!(policy, eps::Episodes)
     # setup
-    pre_hook(eps.epoch_strats, policy)
-    pre_hook(eps.iter_strats, policy)
+    pre_hook(epoch_strats, policy)
+    pre_hook(iter_strats, policy)
 
     # loop over epochs until done
     done = false
@@ -92,46 +107,43 @@ function learn!(policy, eps::Episodes)
     while !done
 
         # one episode
-        pre_hook(eps.episode_strats, policy)
-        ep = Episode(eps.env, policy; eps.kw...)
+        pre_hook(episode_strats, policy)
+        ep = Episode(env, policy; kw...)
         for sars′ in ep
             learn!(policy, sars′...)
 
             # learn steps
-            for metalearner in (eps.episode_strats, eps.epoch_strats, eps.iter_strats)
+            for metalearner in (episode_strats, epoch_strats, iter_strats)
                 for strat in metalearner.managers
                     learn!(policy, strat, sars′)
                 end
             end
-            # learn!(policy, eps.episode_strats, sars′)
-            # learn!(policy, eps.epoch_strats, sars′)
-            # learn!(policy, eps.iter_strats, sars′)
 
             # iter steps
             timestep = ep.niter
-            iter_hook(eps.episode_strats, ep, timestep)
-            iter_hook(eps.epoch_strats, ep, epoch)
-            iter_hook(eps.iter_strats, ep, iter)
+            iter_hook(episode_strats, ep, timestep)
+            iter_hook(epoch_strats, ep, epoch)
+            iter_hook(iter_strats, ep, iter)
 
             # finish the timestep with checks
-            if finished(eps.episode_strats, policy, timestep)
+            if finished(episode_strats, policy, timestep)
                 break
             end
-            if finished(eps.epoch_strats, policy, epoch) || finished(eps.iter_strats, policy, iter)
+            if finished(epoch_strats, policy, epoch) || finished(iter_strats, policy, iter)
                 done = true
                 break
             end
             iter += 1
         end
-        info("Finished episode $epoch after $(ep.niter) steps. Reward: $(ep.total_reward)")
-        post_hook(eps.episode_strats, policy)
+        info("Finished episode $epoch after $(ep.niter) steps. Reward: $(ep.total_reward) mean(Reward): $(ep.total_reward/max(ep.niter,1))")
+        post_hook(episode_strats, policy)
         epoch += 1
 
     end
 
     # tear down
-    post_hook(eps.epoch_strats, policy)
-    post_hook(eps.iter_strats, policy)
+    post_hook(epoch_strats, policy)
+    post_hook(iter_strats, policy)
     return
 end
 
