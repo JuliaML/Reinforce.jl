@@ -25,14 +25,14 @@ function doit(env = GymEnv("BipedalWalker-v2"))
     policy = OnlineActorCritic(s, nA,
         # algo = :INAC,
         ϕ = nnet(2ns, 2nA, [30], :softplus),
-        penalty = L2Penalty(1e-6),
-        γ = 0.995,
-        λ = 0.97,
+        penalty = L2Penalty(1e-5),
+        γ = 0.99,
+        λ = 0.95,
         # αʳ = 0.0001,
         # αᵛ = 0.01,
         # αᵘ = 0.01,
         gaᵛ = OnlineGradAvg(50, lr=0.5, pu=RMSProp()),
-        gaᵘ = OnlineGradAvg(50, lr=0.5, pu=RMSProp()),
+        gaᵘ = OnlineGradAvg(50, lr=0.05, pu=RMSProp()),
         # gaʷ = OnlineGradAvg(50, lr=0.5, pu=Adamax())
     )
 

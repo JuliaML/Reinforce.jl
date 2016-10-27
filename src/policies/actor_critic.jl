@@ -2,6 +2,7 @@
 type Actor{PHI<:Learnable, DIST<:MvNormalTransformation} <: AbstractPolicy
     ϕ::PHI      # map states to dist inputs. ∇logπ is grad(ϕ)
     D::DIST     # the N(ϕ) = N(μ,σ) from which we sample actions
+    prep::PreprocessStep
 end
 
 # TODO: specialize this on the distribution type
@@ -27,7 +28,13 @@ end
     grad!(ϕ)
 end
 @with actor function transform!(actor::Actor, xs::AbstractVector)
-    transform!(ϕ, xs)
+    x = if isa(prep, NoPreprocessing)
+        xs
+    else
+        learn!(prep, xs)
+        transform!(prep, xs)
+    end
+    transform!(ϕ, x)
     transform!(D)
 end
 params(actor::Actor) = params(actor.ϕ)
@@ -73,6 +80,7 @@ function OnlineActorCritic(s::AbstractVector, na::Int;
                      T::DataType = eltype(s),
                      algo::Symbol = :AC,
                      wgt_lookback::Int = 10000,
+                     prep::PreprocessStep = Whiten(T,2length(s),2length(s),lookback=wgt_lookback),
                      penalty::Penalty = L2Penalty(1e-5),
                      ϕ::Learnable = nnet(2length(s), 2na, [], :relu),
                      D::MvNormalTransformation = MvNormalTransformation(zeros(T,na),zeros(T,na)),
@@ -95,7 +103,7 @@ function OnlineActorCritic(s::AbstractVector, na::Int;
     wgt = BoundedEqualWeight(wgt_lookback)
     r̄ = Mean(wgt)
     # svar = Variances(nv, wgt)
-    actor = Actor(ϕ,D)
+    actor = Actor(ϕ,D,prep)
     link_nodes!(ϕ, D)
 
     pre_hook(gaᵛ, zeros(nv))
