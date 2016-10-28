@@ -24,7 +24,7 @@ function doit(env = GymEnv("BipedalWalker-v2"))
 
     policy = OnlineActorCritic(s, nA,
         # algo = :INAC,
-        ϕ = nnet(2ns, 2nA, [60], :softplus),
+        ϕ = nnet(2ns+nA, 2nA, [], :softplus),
         penalty = L2Penalty(1e-5),
         γ = 0.995,
         λ = 0.95,

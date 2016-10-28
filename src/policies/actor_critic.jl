@@ -3,7 +3,9 @@ type Actor{PHI<:Learnable, DIST<:MvNormalTransformation} <: AbstractPolicy
     ϕ::PHI      # map states to dist inputs. ∇logπ is grad(ϕ)
     D::DIST     # the N(ϕ) = N(μ,σ) from which we sample actions
     prep::PreprocessStep
+    last_action
 end
+Actor(ϕ,D,prep=NoPreprocessing()) = Actor(ϕ, D, prep, zeros(D.n))
 
 # TODO: specialize this on the distribution type
 function Reinforce.action(actor::Actor, r, s′, A′)
@@ -20,6 +22,7 @@ function Reinforce.action(actor::Actor, r, s′, A′)
         error()
         a = rand(A′)
     end
+    copy!(actor.last_action, a)
     a
 end
 
@@ -79,10 +82,10 @@ end
 function OnlineActorCritic(s::AbstractVector, na::Int;
                      T::DataType = eltype(s),
                      algo::Symbol = :AC,
-                     wgt_lookback::Int = 10000,
-                     prep::PreprocessStep = Whiten(T,2length(s),2length(s),lookback=wgt_lookback),
+                     wgt_lookback::Int = 20000,
+                     prep::PreprocessStep = Whiten(T,2length(s)+na,2length(s)+na,lookback=wgt_lookback),
                      penalty::Penalty = L2Penalty(1e-5),
-                     ϕ::Learnable = nnet(2length(s), 2na, [], :relu),
+                     ϕ::Learnable = nnet(2length(s)+na, 2na, [], :relu),
                      D::MvNormalTransformation = MvNormalTransformation(zeros(T,na),zeros(T,na)),
                      x::Function = identity,
                      γ::Number = 1.0,
@@ -98,7 +101,7 @@ function OnlineActorCritic(s::AbstractVector, na::Int;
     @assert algo in (:AC, :INAC)
     T = eltype(s)
     ns = length(x(s))
-    nv = 2ns
+    nv = 2ns+na
     nu = length(params(ϕ))
     wgt = BoundedEqualWeight(wgt_lookback)
     r̄ = Mean(wgt)
@@ -137,7 +140,7 @@ function OnlineActorCritic(s::AbstractVector, na::Int;
         gaᵘ,
         # gaʷ,
         # (s, zeros(na), 0.0, s)
-        vcat(s, zeros(T,ns))
+        vcat(s, zeros(T,ns+na))
     )
 end
 
@@ -153,6 +156,7 @@ end
         xs[i+ns] = s′[i] - xs[i]
         xs[i] = s′[i]
     end
+    xs[2ns+1:end] = actor.last_action
     a = action(actor, r, xs, A′)
     # if !isa(actor.prep, NoPreprocessing)
     #     xs[:] = output_value(actor.prep)
@@ -232,7 +236,7 @@ end
     # fit!(svar, x(s′))
 
     # xs = vcat(s, s-last_sars′[1], last_sars′[2])
-    xs′ = vcat(s′, s′-s)
+    xs′ = vcat(s′, s′-s, a)
 
     prepped_xs = transform!(actor.prep, xs)
     prepped_xs′ = transform!(actor.prep, xs′)
