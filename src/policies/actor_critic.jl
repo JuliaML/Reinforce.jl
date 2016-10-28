@@ -153,7 +153,11 @@ end
         xs[i+ns] = s′[i] - xs[i]
         xs[i] = s′[i]
     end
-    action(actor, r, xs, A′)
+    a = action(actor, r, xs, A′)
+    # if !isa(actor.prep, NoPreprocessing)
+    #     xs[:] = output_value(actor.prep)
+    # end
+    a
     # # for i=1:ns
     # #     xs[i+ns] = s′[i] - xs[i]
     # #     xs[i] = s′[i]
@@ -200,6 +204,26 @@ end
 #     out
 # end
 
+
+# This is similar to replacing traces for continuous values.
+# If we're reversing the trace then we simply add, if we're increasing
+# the magnitude then we take the larger of ei/xi.
+# This should help with the stability of traces.
+# Note: invented by @tbreloff, but I'm sure it exists somewhere already.
+function update_eligibilty!{T}(e::AbstractArray{T}, x::AbstractArray{T},
+                              γλ::Number; clip::Number = 1e1)
+    @assert length(e) == length(x)
+    @inbounds for i=1:length(e)
+        ei = γλ * e[i]
+        xi = clamp(x[i], -clip, clip)
+        e[i] = if ei < zero(T)
+            xi < zero(T) ? min(ei, xi) : ei+xi
+        else
+            xi > zero(T) ? max(ei, xi) : ei+xi
+        end
+    end
+end
+
 @with ac function learn!(ac::OnlineActorCritic, s, a, r, s′)
     # xs = whiten(x(s), svar)
     # xs′ = whiten(x(s′), svar)
@@ -210,8 +234,11 @@ end
     # xs = vcat(s, s-last_sars′[1], last_sars′[2])
     xs′ = vcat(s′, s′-s)
 
+    prepped_xs = transform!(actor.prep, xs)
+    prepped_xs′ = transform!(actor.prep, xs′)
+
     # compute TD delta
-    δ = r - mean(r̄) + γ * dot(v, xs′) - dot(v, xs)
+    δ = r - mean(r̄) + γ * dot(v, prepped_xs′) - dot(v, prepped_xs)
 
     # update average reward
     # r̄ += αʳ * δ
@@ -220,9 +247,10 @@ end
 
     # update critic
     γλ = γ * λ
+    update_eligibilty!(eᵛ, prepped_xs, γλ)
     chg = zeros(v)
     for i=1:nv
-        eᵛ[i] = γλ * eᵛ[i] + xs[i]
+        # eᵛ[i] = γλ * eᵛ[i] + xs[i]
         chg[i] = -δ * eᵛ[i] + deriv(penalty, v[i])
         # v[i] += αᵛ * chg #+ (one(αᵛ) - αᵛ) * v[i]
     end
@@ -237,15 +265,14 @@ end
     grad!(actor)
     ∇logπ = grad(actor)
     # @show extrema(∇logπ), extrema(eᵘ)
-    for i=1:nu
-        eᵘ[i] = γλ * eᵘ[i] + ∇logπ[i]
-    end
+    update_eligibilty!(eᵘ, ∇logπ, γλ)
+    # for i=1:nu
+    #     eᵘ[i] = γλ * eᵘ[i] + ∇logπ[i]
+    # end
 
     # update the actor (different by algo)
     update_actor!(ac, params(actor), ∇logπ)
-
-    # # update ac.xs
-    # xs = xs′
+    return
 end
 
 @with ac function update_actor!(ac::OnlineActorCritic{:AC}, u, ∇logπ)
@@ -254,6 +281,9 @@ end
     for i=1:nu
         # note: we multiply by σ² to reduce instabilities
         chg[i] = -δ * eᵘ[i] + deriv(penalty, u[i])
+        if isnan(chg[i])
+            @show i, δ, eᵘ[i], u[i]
+        end
         # chg = δ * eᵘ[i] * σ²[mod1(i,na)] - deriv(penalty, u[i])
         # u[i] += αᵘ * chg
     end
