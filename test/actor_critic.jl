@@ -24,15 +24,15 @@ function doit(env = GymEnv("BipedalWalker-v2"))
 
     policy = OnlineActorCritic(s, nA,
         # algo = :INAC,
-        ϕ = nnet(2ns+nA, 2nA, [], :softplus),
+        ϕ = nnet(2ns+nA, 2nA, [100], :relu),
         penalty = L2Penalty(1e-5),
         γ = 0.995,
         λ = 0.95,
         # αʳ = 0.0001,
         # αᵛ = 0.01,
         # αᵘ = 0.01,
-        gaᵛ = OnlineGradAvg(50, lr=0.2, pu=RMSProp()),
-        gaᵘ = OnlineGradAvg(50, lr=0.05, pu=RMSProp()),
+        gaᵛ = OnlineGradAvg(10, lr=0.1, pu=SGD()),
+        gaᵘ = OnlineGradAvg(10, lr=0.05, pu=SGD()),
         # gaʷ = OnlineGradAvg(50, lr=0.5, pu=Adamax())
     )
 
@@ -73,6 +73,9 @@ function doit(env = GymEnv("BipedalWalker-v2"))
         @show i, ep.total_reward
         # i<5000 && return
 
+        policy.gaᵛ.lr *= 0.999
+        policy.gaᵘ.lr *= 0.999
+
         # i>=2000 && (policy.αᵘ = 0.0005)
         update!(cp_ϕ)
         # update!(cp_C)
@@ -101,9 +104,11 @@ function doit(env = GymEnv("BipedalWalker-v2"))
     end
 
     function renderfunc(ep,i)
+        policy.actor.testing = true
         if mod1(ep.niter, 1) == 1
             OpenAIGym.render(env, ep.niter, nothing)
         end
+        policy.actor.testing = false
     end
 
 

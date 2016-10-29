@@ -4,8 +4,9 @@ type Actor{PHI<:Learnable, DIST<:MvNormalTransformation} <: AbstractPolicy
     D::DIST     # the N(ϕ) = N(μ,σ) from which we sample actions
     prep::PreprocessStep
     last_action
+    testing::Bool
 end
-Actor(ϕ,D,prep=NoPreprocessing()) = Actor(ϕ, D, prep, zeros(D.n))
+Actor(ϕ,D,prep=NoPreprocessing()) = Actor(ϕ, D, prep, zeros(D.n), false)
 
 # TODO: specialize this on the distribution type
 function Reinforce.action(actor::Actor, r, s′, A′)
@@ -37,8 +38,13 @@ end
         learn!(prep, xs)
         transform!(prep, xs)
     end
-    transform!(ϕ, x)
-    transform!(D)
+    phi = transform!(ϕ, x)
+    if testing
+        # if we're testing, return the mean exactly
+        phi[1:D.n]
+    else
+        transform!(D)
+    end
 end
 params(actor::Actor) = params(actor.ϕ)
 grad(actor::Actor) = grad(actor.ϕ)
@@ -215,7 +221,7 @@ end
 # This should help with the stability of traces.
 # Note: invented by @tbreloff, but I'm sure it exists somewhere already.
 function update_eligibilty!{T}(e::AbstractArray{T}, x::AbstractArray{T},
-                              γλ::Number; clip::Number = 1e1)
+                              γλ::Number; clip::Number = 1e2)
     @assert length(e) == length(x)
     @inbounds for i=1:length(e)
         ei = γλ * e[i]
@@ -229,6 +235,7 @@ function update_eligibilty!{T}(e::AbstractArray{T}, x::AbstractArray{T},
 end
 
 @with ac function learn!(ac::OnlineActorCritic, s, a, r, s′)
+    actor.testing && return
     # xs = whiten(x(s), svar)
     # xs′ = whiten(x(s′), svar)
     #
