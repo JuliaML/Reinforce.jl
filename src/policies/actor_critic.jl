@@ -29,7 +29,7 @@ end
 
 @with actor function grad!(actor::Actor)
     grad!(D)
-    grad!(ϕ)
+    grad!(ϕ, input_grad(D))
 end
 @with actor function transform!(actor::Actor, xs::AbstractVector)
     x = if isa(prep, NoPreprocessing)
@@ -43,7 +43,7 @@ end
         # if we're testing, return the mean exactly
         phi[1:D.n]
     else
-        transform!(D)
+        transform!(D, phi)
     end
 end
 params(actor::Actor) = params(actor.ϕ)

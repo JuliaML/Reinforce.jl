@@ -1,11 +1,7 @@
 module pgrad
 
-# this is a port of the example found at
-#	http://rl-gym-doc.s3-website-us-west-2.amazonaws.com/mlss/lab1.html#starter
-
 using Reinforce
 using OpenAIGym
-# using Distributions
 using Transformations
 using StochasticOptimization
 using Penalties
@@ -23,16 +19,16 @@ function doit(env = GymEnv("BipedalWalker-v2"))
     @show s ns
 
     policy = OnlineActorCritic(s, nA,
-        # algo = :INAC,
-        ϕ = nnet(2ns+nA, 2nA, [100], :relu),
+        # ϕ = nnet(2ns+nA, 2nA, [100], :softplus, lookback=10000),
+        ϕ = resnet(2ns+nA, 2nA, 1, nh=[100], inner_activation=:softplus, lookback=10000),
         penalty = L2Penalty(1e-5),
         γ = 0.995,
         λ = 0.95,
         # αʳ = 0.0001,
         # αᵛ = 0.01,
         # αᵘ = 0.01,
-        gaᵛ = OnlineGradAvg(10, lr=0.1, pu=SGD()),
-        gaᵘ = OnlineGradAvg(10, lr=0.05, pu=SGD()),
+        gaᵛ = OnlineGradAvg(50, lr=0.1, pu=RMSProp()),
+        gaᵘ = OnlineGradAvg(50, lr=0.01, pu=RMSProp()),
         # gaʷ = OnlineGradAvg(50, lr=0.5, pu=Adamax())
     )
 
@@ -44,19 +40,6 @@ function doit(env = GymEnv("BipedalWalker-v2"))
     D = policy.actor.D
 
     cp_ϕ = ChainPlot(ϕ)
-    # nϕplts = length(cp_ϕ.plt.subplots)
-    # cp_C = ChainPlot(C)
-    # μ = reshape(D.dist.μ,nA,1)
-    # hm1 = heatmap(μ, yflip=true,
-    #             title=string(maximum(D.dist.μ)),
-    #             xguide=string(minimum(D.dist.μ)),
-    #             left_margin=150px)
-    # Σ = UpperTriangular(D.dist.Σ.chol.factors)
-    # Σ = Diagonal(D.dist.Σ.diag)
-    # Σ = Diagonal(abs.(output_value(ϕ)[nA+1:end]))
-    # hm2 = heatmap(Σ, yflip=true,
-    #             title=string(maximum(Σ)),
-    #             xguide=string(minimum(Σ)))
     tpplt = plot(layout=grid(4,2))
     tp_δ = TracePlot(1, sp=tpplt[1], title="delta")
     tp_r̄ = TracePlot(1, sp=tpplt[2], title="r")
@@ -78,7 +61,6 @@ function doit(env = GymEnv("BipedalWalker-v2"))
 
         # i>=2000 && (policy.αᵘ = 0.0005)
         update!(cp_ϕ)
-        # update!(cp_C)
         for (tp,var) in [(tp_δ, policy.δ), (tp_r̄, mean(policy.r̄)),
                          (tp_eᵛ, policy.eᵛ), (tp_v, policy.v),
                          (tp_eμ, policy.eᵘ[1:nA]), (tp_μ, output_value(ϕ)[1:nA]),
@@ -86,20 +68,6 @@ function doit(env = GymEnv("BipedalWalker-v2"))
                         ]
             push!(tp, i, var)
         end
-        # hm1 = heatmap(reshape(D.dist.μ,nA,1), yflip=true,
-        #             title=string(maximum(D.dist.μ)),
-        #             xguide=string(minimum(D.dist.μ)),
-        #             left_margin=150px)
-        # # Σ = UpperTriangular(D.dist.Σ.chol.factors)
-        # # Σ = Diagonal(D.dist.Σ.diag)
-        # Σ = Diagonal(abs.(output_value(ϕ)[nA+1:end]))
-        # hm2 = heatmap(Σ, yflip=true,
-        #             title=string(maximum(Σ)),
-        #             xguide=string(minimum(Σ)))
-        # plot(cp_ϕ.plt, hm1, hm2,
-        #     tp_δ.plt, tp_r̄.plt, tp_eᵛ.plt, tp_v.plt, tp_eᵘ.plt,
-        #     layout = @layout([ϕ{0.3h}; hm1{0.2w,0.2h} hm2; d; grid(2,2)])
-        # )
         gui()
     end
 
