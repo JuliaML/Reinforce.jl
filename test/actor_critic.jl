@@ -4,7 +4,7 @@ using Reinforce
 using OpenAIGym
 using Transformations
 using StochasticOptimization
-using Penalties
+using PenaltyFunctions
 
 using MLPlots; gr(size=(1400,1400), leg=false)
 

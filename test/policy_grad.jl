@@ -6,9 +6,7 @@ module pgrad
 using Reinforce
 using OpenAIGym
 # using Distributions
-using Transformations
-using StochasticOptimization
-using Penalties
+using Learn
 
 using MLPlots; gr(size=(1400,1400))
 

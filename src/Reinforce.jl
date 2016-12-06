@@ -12,7 +12,7 @@ using RecipesBase
 # using Parameters
 using StochasticOptimization
 using Transformations
-using Penalties
+using PenaltyFunctions
 import OnlineStats: Mean, Variances, Weight, BoundedEqualWeight
 
 import LearnBase: learn!, transform!, grad!, params, grad
@@ -122,6 +122,25 @@ include("solvers.jl")
 
 include("envs/cartpole.jl")
 include("envs/pendulum.jl")
+
+# ----------------------------------------------------------------
+# a mouse/pointer action space
+
+immutable MouseAction
+    x::Int
+    y::Int
+end
+
+type MouseActionSet <: AbstractSet
+    screen_width::Int
+    screen_height::Int
+end
+
+randtype(s::MouseActionSet) = MouseAction
+Base.rand(s::MouseActionSet) = MouseAction(rand(1:s.screen_width), rand(1:s.screen_height))
+Base.in(a::MouseAction, s::MouseActionSet) = a.x in 1:s.screen_width && a.y in 1:s.screen_height
+Base.length(s::MouseActionSet) = 1
+
 
 # ----------------------------------------------------------------
 
