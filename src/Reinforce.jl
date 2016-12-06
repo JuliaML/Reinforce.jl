@@ -129,16 +129,18 @@ include("envs/pendulum.jl")
 immutable MouseAction
     x::Int
     y::Int
+    button::Int
 end
 
 type MouseActionSet <: AbstractSet
     screen_width::Int
     screen_height::Int
+    button::IntervalSet{Int}
 end
 
 randtype(s::MouseActionSet) = MouseAction
-Base.rand(s::MouseActionSet) = MouseAction(rand(1:s.screen_width), rand(1:s.screen_height))
-Base.in(a::MouseAction, s::MouseActionSet) = a.x in 1:s.screen_width && a.y in 1:s.screen_height
+Base.rand(s::MouseActionSet) = MouseAction(rand(1:s.screen_width), rand(1:s.screen_height), rand(s.button))
+Base.in(a::MouseAction, s::MouseActionSet) = a.x in 1:s.screen_width && a.y in 1:s.screen_height && a.button in s.button
 Base.length(s::MouseActionSet) = 1
 
 
