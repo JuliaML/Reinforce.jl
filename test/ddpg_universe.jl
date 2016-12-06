@@ -9,11 +9,54 @@ using DataStructures
 # env = GymEnv("Pong-v3")
 env = GymEnv("wob.mini.CircleCenter-v0")
 
-# experience replay buffer
-experience = CircularBuffer{Tuple}(100)
-
 # agent/policy
 policy = RandomPolicy()
+
+# -----------------------------------
+# quick AR process for arbitrary vectors
+# used for exploration policy of DDPG
+using Distributions
+type ARProcess{T}
+    prev::T
+    reversion
+    noise
+end
+function Base.get(ar::ARProcess)
+    ar.prev .= ar.reversion .* ar.prev .+ rand(noise)
+end
+# -----------------------------------
+
+type DdpgPolicy
+    ns; na; nϕ
+    features
+    actor
+    actor_target
+    critic
+    critic_target
+    experience
+end
+
+function build_actor_critic(env)
+    ns = length(state(env))
+    na = length(actions(env))
+
+    # shared feature map: ϕ(s,a)
+    nϕ = 10
+    features = nnet(ns, nϕ, [10], :relu)
+
+    # actor: μ(s | Θμ)
+    actor = Chain(features, Affine(nϕ, na))
+    actor_target = copy(actor)
+
+    # critic: Q(s,a | ΘQ)
+    critic = Chain(features, Concat(nϕ+na), Affine(nϕ+na, 1))
+    critic_target = copy(critic)
+
+    # experience replay buffer
+    experience = CircularBuffer{Tuple}(100)
+
+    DdpgPolicy(ns, na, nϕ, features, actor, actor_target, critic, critic_target, experience)
+end
 
 # main loop... run one episode, getting a tuple: (s, a, r, s′)
 for sars in Episode(env, policy)
