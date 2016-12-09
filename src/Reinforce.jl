@@ -124,6 +124,22 @@ include("envs/cartpole.jl")
 include("envs/pendulum.jl")
 
 # ----------------------------------------------------------------
+# a keyboard action space
+
+immutable KeyboardAction
+    key
+end
+
+type KeyboardActionSet <: AbstractSet
+    keys::Vector
+end
+
+LearnBase.randtype(s::KeyboardActionSet) = KeyboardAction
+Base.rand(s::KeyboardActionSet) = KeyboardAction(rand(s.keys))
+Base.in(a::KeyboardAction, s::KeyboardActionSet) = a.key in s.keys
+Base.length(s::KeyboardActionSet) = 1
+
+# ----------------------------------------------------------------
 # a mouse/pointer action space
 
 immutable MouseAction
@@ -135,10 +151,10 @@ end
 type MouseActionSet <: AbstractSet
     screen_width::Int
     screen_height::Int
-    button::IntervalSet{Int}
+    button::DiscreteSet{Vector{Int}}
 end
 
-randtype(s::MouseActionSet) = MouseAction
+LearnBase.randtype(s::MouseActionSet) = MouseAction
 Base.rand(s::MouseActionSet) = MouseAction(rand(1:s.screen_width), rand(1:s.screen_height), rand(s.button))
 Base.in(a::MouseAction, s::MouseActionSet) = a.x in 1:s.screen_width && a.y in 1:s.screen_height && a.button in s.button
 Base.length(s::MouseActionSet) = 1

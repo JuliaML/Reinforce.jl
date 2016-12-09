@@ -5,9 +5,12 @@ using DataStructures
 
 # NOTE: to find other valid environment names, look at the universe code that registers them:
 #   https://github.com/openai/universe/blob/master/universe/__init__.py
-# env = GymEnv("flashgames.DuskDrive-v0")
-# env = GymEnv("Pong-v3")
-env = GymEnv("wob.mini.CircleCenter-v0")
+env = gym("flashgames.DuskDrive-v0")
+# env = gym("Pong-v3")
+# env = gym("wob.mini.CircleCenter-v0")
+# env = gym("Breakout-v0")
+@show actions(env, state(env))
+# error()
 
 # agent/policy
 policy = RandomPolicy()
@@ -62,17 +65,17 @@ end
 for sars in Episode(env, policy)
     # @show sars
     s,a,r,s′ = sars
-    @show a,r
+    # @show a,r
 
-    push!(experience, sars)
+    # push!(experience, sars)
 
-    render(env)
+    OpenAIGym.render(env)
 
     #= TODO
     - actor/critic share "feature transformation" ϕ(s,a)
     - update policy (agent) by sampling from the experience replay
     =#
 end
-@show length(experience)
+# @show length(experience)
 
 end # module

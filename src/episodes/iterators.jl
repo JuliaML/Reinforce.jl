@@ -2,8 +2,8 @@
 type Episode
     env
     policy
-    total_reward::Float64   # total reward of the episode
-    last_reward::Float64
+    total_reward   # total reward of the episode
+    last_reward
     niter::Int             # current step in this episode
     freq::Int               # number of steps between choosing actions
     # append_action::Bool
