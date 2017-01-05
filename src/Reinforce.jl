@@ -122,6 +122,7 @@ include("solvers.jl")
 
 include("envs/cartpole.jl")
 include("envs/pendulum.jl")
+include("envs/mountain_car.jl")
 
 # ----------------------------------------------------------------
 # a keyboard action space
