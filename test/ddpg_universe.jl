@@ -5,9 +5,9 @@ using DataStructures
 
 # NOTE: to find other valid environment names, look at the universe code that registers them:
 #   https://github.com/openai/universe/blob/master/universe/__init__.py
-# env = gym("flashgames.DuskDrive-v0")
+env = gym("flashgames.DuskDrive-v0")
 # env = gym("Pong-v3")
-env = gym("wob.mini.CircleCenter-v0")
+# env = gym("wob.mini.CircleCenter-v0")
 # env = gym("Breakout-v0")
 @show actions(env, state(env))
 # error()

@@ -74,7 +74,7 @@ function do_cem_test(sublearners...; env = GymEnv("CartPole-v0"),
 
     strat = CrossEntropyMethod(;maxsteps=maxsteps, kw...)
     learner = make_learner(strat, sublearners...; maxiter=maxiter, kw...)
-    learn!(policy, learner, forever(env))
+    learn!(policy, learner, repeated(env))
 
     @show policy strat
 end

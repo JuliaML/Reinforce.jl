@@ -68,7 +68,12 @@ function learn!(policy::AbstractPolicy, strat::CrossEntropyMethod, env::Abstract
     # overwrite the parameters of the policy and run an episode for each θ
     Rs = map(θ -> begin
         Transformations.params(policy)[:] = θ
-        R, T = episode!(env, policy; maxsteps = strat.maxsteps)
+        R = 0
+        for (i,sars) in enumerate(Episode(env,policy))
+            R += sars[3]
+            i < strat.maxsteps || break
+        end
+        # R, T = episode!(env, policy; maxsteps = strat.maxsteps)
         R
     end, θs)
 
