@@ -65,6 +65,25 @@ function Base.next(ep::Episode, i)
 	(s, a, r, s′), i+1
 end
 
+"""
+Use do-block notation to run an episode:
+
+```
+run_episode(env,policy) do
+    # render or something else
+end
+```
+"""
+function run_episode(f::Function, env::AbstractEnvironment, policy::AbstractPolicy; maxsteps = typemax(Int))
+    R = 0.
+    for (i, sars) in enumerate(Episode(env, policy))
+        R += sars[3]
+        f() # the do block
+        i >= maxsteps && break
+    end
+    R
+end
+
 # ---------------------------------------------------------------------
 # iterate through many episodes
 

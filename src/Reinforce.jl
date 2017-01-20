@@ -39,7 +39,8 @@ export
 	state!,
 
 	Episode,
-    Episodes
+    Episodes,
+    run_episode
 	# episode!
 
 
