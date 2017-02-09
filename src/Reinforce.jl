@@ -132,7 +132,7 @@ immutable KeyboardAction
     key
 end
 
-type KeyboardActionSet <: AbstractSet
+type KeyboardActionSet{T} <: AbstractSet{T}
     keys::Vector
 end
 
@@ -150,7 +150,7 @@ immutable MouseAction
     button::Int
 end
 
-type MouseActionSet <: AbstractSet
+type MouseActionSet{T} <: AbstractSet{T}
     screen_width::Int
     screen_height::Int
     button::DiscreteSet{Vector{Int}}
