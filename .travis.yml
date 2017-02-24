@@ -3,7 +3,8 @@ language: julia
 os:
   - linux
 julia:
-  - 0.5
+  - release
+  - nightly
 matrix:
   allow_failures:
     - julia: nightly

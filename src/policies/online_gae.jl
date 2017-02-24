@@ -1,4 +1,6 @@
 
+# WARNING: This should not be used as-is.  It's unfinished experimentation.
+
 using Transformations
 using StochasticOptimization
 using PenaltyFunctions
