@@ -8,15 +8,16 @@ using Reexport
 using Distributions
 @reexport using LearnBase
 using RecipesBase
+using LearningStrategies
 # using ValueHistories
 # using Parameters
-using StochasticOptimization
-using Transformations
-using PenaltyFunctions
+# using StochasticOptimization
+# using Transformations
+# using PenaltyFunctions
 import OnlineStats: Mean, Variances, Weight, BoundedEqualWeight
 
 import LearnBase: learn!, transform!, grad!, params, grad
-import StochasticOptimization: pre_hook, iter_hook, finished, post_hook
+import LearningStrategies: pre_hook, iter_hook, finished, post_hook
 
 export
 	AbstractEnvironment,

@@ -1,4 +1,8 @@
 
+using Transformations
+using StochasticOptimization
+using PenaltyFunctions
+
 # ------------------------------------------------------------------
 
 #=

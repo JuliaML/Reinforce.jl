@@ -1,4 +1,8 @@
 
+using Transformations
+using StochasticOptimization
+using PenaltyFunctions
+
 type Actor{PHI<:Learnable, DIST<:MvNormalTransformation} <: AbstractPolicy
     ϕ::PHI      # map states to dist inputs. ∇logπ is grad(ϕ)
     D::DIST     # the N(ϕ) = N(μ,σ) from which we sample actions
