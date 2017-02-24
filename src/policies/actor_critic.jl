@@ -4,6 +4,7 @@
 using Transformations
 using StochasticOptimization
 using PenaltyFunctions
+import OnlineStats: Mean, Variances, Weight, BoundedEqualWeight
 
 type Actor{PHI<:Learnable, DIST<:MvNormalTransformation} <: AbstractPolicy
     ϕ::PHI      # map states to dist inputs. ∇logπ is grad(ϕ)

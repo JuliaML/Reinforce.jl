@@ -6,17 +6,12 @@ module Reinforce
 using Reexport
 @reexport using StatsBase
 using Distributions
-@reexport using LearnBase
 using RecipesBase
-using LearningStrategies
-# using ValueHistories
-# using Parameters
-# using StochasticOptimization
-# using Transformations
-# using PenaltyFunctions
-import OnlineStats: Mean, Variances, Weight, BoundedEqualWeight
 
+@reexport using LearnBase
 import LearnBase: learn!, transform!, grad!, params, grad
+
+using LearningStrategies
 import LearningStrategies: pre_hook, iter_hook, finished, post_hook
 
 export
@@ -42,7 +37,6 @@ export
 	Episode,
     Episodes,
     run_episode
-	# episode!
 
 
 # ----------------------------------------------------------------
