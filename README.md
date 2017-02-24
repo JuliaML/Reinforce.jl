@@ -52,18 +52,25 @@ The `action` method maps the last reward and current state to the next chosen ac
 
 ---
 
-Iterate through episodes using the `Episode` iterator.  The convenience method `episode!` demonstrates this:
+Iterate through episodes using the `Episode` iterator.  A 4-tuple `(s,a,r,s′)` is returned from each step of the episode:
 
 ```julia
-function episode!(env, policy = RandomPolicy(); stepfunc = on_step, kw...)
-	ep = Episode(env, policy; kw...)
-	for sars in ep
-		stepfunc(env, ep.niter, sars)
-	end
-	ep.total_reward, ep.niter
+ep = Episode(env, policy)
+for (s, a, r, s′) in ep
+    # do some custom processing of the sars-tuple
+end
+R = ep.total_reward
+T = ep.niter
+```
+
+There is also a convenience method `run_episode`.  The following is an equivalent method to the last example:
+
+```julia
+R = run_episode(env, policy) do
+    # anything you want... this section is called after each step
 end
 ```
 
-A 4-tuple `(s,a,r,s′)` is returned from each step of the episode.  Whether we write `r` or `r′` is a matter of convention.
+---
 
 ## Author: [Tom Breloff](https://github.com/tbreloff)
