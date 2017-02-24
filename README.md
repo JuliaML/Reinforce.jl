@@ -1,6 +1,6 @@
-# Reinforce (WIP)
+# Reinforce
 
-[![Build Status](https://travis-ci.org/tbreloff/Reinforce.jl.svg?branch=master)](https://travis-ci.org/tbreloff/Reinforce.jl)
+[![Build Status](https://travis-ci.org/JuliaML/Reinforce.jl.svg?branch=master)](https://travis-ci.org/JuliaML/Reinforce.jl)
 [![Gitter](https://badges.gitter.im/reinforcejl/Lobby.svg)](https://gitter.im/reinforcejl/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 Reinforce.jl is an interface for Reinforcement Learning.  It is intended to connect modular environments, policies, and solvers with a simple interface.
@@ -12,8 +12,8 @@ Reinforce.jl is an interface for Reinforcement Learning.  It is intended to conn
 
 Packages which build on Reinforce:
 
-- [AtariAlgos](https://github.com/tbreloff/AtariAlgos.jl): Environment which wraps Atari games using [ArcadeLearningEnvironment](https://github.com/nowozin/ArcadeLearningEnvironment.jl)
-- [OpenAIGym](https://github.com/tbreloff/OpenAIGym.jl): Wrapper for OpenAI's python package: gym
+- [AtariAlgos](https://github.com/JuliaML/AtariAlgos.jl): Environment which wraps Atari games using [ArcadeLearningEnvironment](https://github.com/nowozin/ArcadeLearningEnvironment.jl)
+- [OpenAIGym](https://github.com/JuliaML/OpenAIGym.jl): Wrapper for OpenAI's python package: gym
 
 ---
 
@@ -59,3 +59,5 @@ end
 ```
 
 A 4-tuple `(s,a,r,s′)` is returned from each step of the episode.  Whether we write `r` or `r′` is a matter of convention.
+
+## Author: [Tom Breloff](https://github.com/tbreloff)
