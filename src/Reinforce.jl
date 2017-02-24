@@ -21,6 +21,7 @@ export
 	reward,
 	state,
 	actions,
+    ismdp,
 
 	AbstractPolicy,
 	RandomPolicy,
@@ -89,6 +90,15 @@ state(env::AbstractEnvironment) = env.state
 Return the current reward of the environment.
 """
 reward(env::AbstractEnvironment) = env.reward
+
+"""
+`ismdp(env) --> bool`
+
+An environment may be fully observable (MDP) or partially observable (POMDP).  In the case of a partially observable environment, the state `s` is really an observation `o`.  To maintain consistency, we call everything a state, and assume that an environment is free to maintain additional (unobserved) internal state.
+
+The `ismdp` query returns true when the environment is MDP, and false otherwise.
+"""
+ismdp(env::AbstractEnvironment) = false
 
 
 # ----------------------------------------------------------------
