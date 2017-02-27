@@ -3,7 +3,7 @@ language: julia
 os:
   - linux
 julia:
-  - release
+  - 0.5
   - nightly
 matrix:
   allow_failures:
@@ -13,4 +13,4 @@ notifications:
 # uncomment the following lines to override the default test script
 script:
  - if [[ -a .git/shallow ]]; then git fetch --unshallow; fi
- - julia -e 'Pkg.clone("https://github.com/JuliaML/LearningStrategies.jl"); Pkg.clone(pwd()); Pkg.build("Reinforce"); Pkg.test("Reinforce"; coverage=false)'
+ - julia -e 'Pkg.clone(pwd()); Pkg.build("Reinforce"); Pkg.test("Reinforce"; coverage=false)'
