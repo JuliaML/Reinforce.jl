@@ -20,6 +20,7 @@ export
 	step!,
 	reward,
 	state,
+    finished,
 	actions,
     ismdp,
 
