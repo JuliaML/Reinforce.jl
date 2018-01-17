@@ -17,7 +17,7 @@ const τ = 0.02 # seconds between state updates
 const θ_threshold = 24π / 360
 const x_threshold = 2.4
 
-type CartPole <: AbstractEnvironment
+mutable struct CartPole <: AbstractEnvironment
 	state::Vector{Float64}
 	reward::Float64
 end

@@ -18,7 +18,7 @@ Wraps a LearnBase.Transformation which converts an input vector to action values
 For discrete actions, it chooses the action which produces the highest value.
 For continuous (interval) actions, it squashes actions to [0,1].
 """
-immutable TransformPolicy{T} <: AbstractPolicy
+struct TransformPolicy{T} <: AbstractPolicy
 	trans::T
 end
 Transformations.params(tp::TransformPolicy) = params(tp.trans)

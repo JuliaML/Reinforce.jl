@@ -40,7 +40,7 @@ Maps state to value: V(s)
 
 We update the learnable parameters using gradient vector δ
 """
-type ValueCritic{T,TRANS<:Learnable} <: Learnable
+mutable struct ValueCritic{T,TRANS<:Learnable} <: Learnable
     trans::TRANS  # nS --> 1  transformation which outputs a value V(s) for state s
     γ::T            # discount
     lastv::T       # V(s)
@@ -48,7 +48,7 @@ type ValueCritic{T,TRANS<:Learnable} <: Learnable
     # lastδ::T
 end
 
-function ValueCritic{T}(::Type{T}, trans::Learnable, γ::T)
+function ValueCritic(::Type{T}, trans::Learnable, γ::T) where T
     ValueCritic{T,typeof(trans)}(trans, γ, zero(T), zero(T))
 end
 
@@ -59,7 +59,7 @@ end
 
 # give reward r, compute output grad: δ = r + γV(s′) - V(s)
 # then backprop to get ∇θ
-function grad!{T}(critic::ValueCritic{T}, r::Number)
+function grad!(critic::ValueCritic{T}, r::Number) where T
     Vs′ = output_value(critic.trans)[1]
     Vs = critic.lastv
     # critic.lastδ = critic.δ
@@ -96,7 +96,7 @@ We assume the general form of mapping states (s) to actions (a):
     - the sufficient statistics of distribution D
     - some concatenated combination of μ/U/σ for multivariate normals
 """
-type OnlineGAE{T      <: Number,
+mutable struct OnlineGAE{T      <: Number,
                ASET   <: AbstractSet,
                PHI    <: Learnable,
                DIST   <: MvNormalTransformation,
@@ -123,15 +123,15 @@ type OnlineGAE{T      <: Number,
     critic_learner::CL
 end
 
-function OnlineGAE{T}(A::AbstractSet,
-                      ϕ::Learnable,
-                      D::MvNormalTransformation,
-                      critic_trans::Learnable,
-                      γ::T,
-                      λ::T,
-                      actor_learner::LearningStrategy,
-                      critic_learner::LearningStrategy;
-                      penalty::Penalty = NoPenalty())
+function OnlineGAE(A::AbstractSet,
+                   ϕ::Learnable,
+                   D::MvNormalTransformation,
+                   critic_trans::Learnable,
+                   γ::T,
+                   λ::T,
+                   actor_learner::LearningStrategy,
+                   critic_learner::LearningStrategy;
+                   penalty::Penalty = NoPenalty()) where T
     # connect transformations, init the critic
     link_nodes!(ϕ, D)
     critic = ValueCritic(T, critic_trans, γ)
@@ -147,7 +147,7 @@ end
 # don't do anything here... we'll update later
 LearnBase.update!(π::OnlineGAE, ::Void) = return
 
-function Reinforce.reset!{T}(π::OnlineGAE{T})
+function Reinforce.reset!(π::OnlineGAE{T}) where T
     fill!(π.ϵ, zero(T))
     # π.critic.lastv = 0
     # pre_hook(π.actor_learner, π.ϕ)

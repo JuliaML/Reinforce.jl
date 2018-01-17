@@ -44,7 +44,7 @@ export
 # ----------------------------------------------------------------
 # Implement this interface for a new environment
 
-abstract AbstractEnvironment
+abstract type AbstractEnvironment end
 
 
 """
@@ -105,7 +105,7 @@ ismdp(env::AbstractEnvironment) = false
 # ----------------------------------------------------------------
 # Implement this interface for a new policy
 
-abstract AbstractPolicy
+abstract type AbstractPolicy end
 
 """
 `a′ = action(policy, r, s′, A′)`
@@ -134,11 +134,11 @@ include("envs/mountain_car.jl")
 # ----------------------------------------------------------------
 # a keyboard action space
 
-immutable KeyboardAction
+struct KeyboardAction
     key
 end
 
-type KeyboardActionSet{T} <: AbstractSet{T}
+mutable struct KeyboardActionSet{T} <: AbstractSet{T}
     keys::Vector
 end
 
@@ -150,13 +150,13 @@ Base.length(s::KeyboardActionSet) = 1
 # ----------------------------------------------------------------
 # a mouse/pointer action space
 
-immutable MouseAction
+struct MouseAction
     x::Int
     y::Int
     button::Int
 end
 
-type MouseActionSet{T} <: AbstractSet{T}
+mutable struct MouseActionSet{T} <: AbstractSet{T}
     screen_width::Int
     screen_height::Int
     button::DiscreteSet{Vector{Int}}

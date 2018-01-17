@@ -44,7 +44,7 @@ TODO: more details and examples
 Agents/policies are created by subtyping `AbstractPolicy` and implementing `action`.  The built-in random policy is a short example:
 
 ```julia
-type RandomPolicy <: AbstractPolicy end
+mutable struct RandomPolicy <: AbstractPolicy end
 action(policy::RandomPolicy, r, s′, A′) = rand(A′)
 ```
 

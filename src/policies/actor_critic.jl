@@ -6,7 +6,7 @@ using StochasticOptimization
 using PenaltyFunctions
 import OnlineStats: Mean, Variances, Weight, BoundedEqualWeight
 
-type Actor{PHI<:Learnable, DIST<:MvNormalTransformation} <: AbstractPolicy
+mutable struct Actor{PHI<:Learnable, DIST<:MvNormalTransformation} <: AbstractPolicy
     ϕ::PHI      # map states to dist inputs. ∇logπ is grad(ϕ)
     D::DIST     # the N(ϕ) = N(μ,σ) from which we sample actions
     prep::PreprocessStep
@@ -62,7 +62,7 @@ This is an implementation of the "AC" algorithm (Actor-critic Algorithm) from:
     Degris et al, "Model-Free Reinforcement Learning with Continuous Action in Practice"
 =#
 
-type OnlineActorCritic{ALGO, T, WGT<:Weight, PEN<:Penalty, ACTOR} <: AbstractPolicy
+mutable struct OnlineActorCritic{ALGO, T, WGT<:Weight, PEN<:Penalty, ACTOR} <: AbstractPolicy
     δ::T            # last TD δ
     # r̄::T            # estimate of average return
     r̄::Mean{WGT}
@@ -157,7 +157,7 @@ function OnlineActorCritic(s::AbstractVector, na::Int;
     )
 end
 
-function Reinforce.reset!{A,T}(ac::OnlineActorCritic{A,T})
+function Reinforce.reset!(ac::OnlineActorCritic{A,T}) where {A,T}
     # reset!(ac.actor)
     fill!(ac.eᵛ, zero(T))
     fill!(ac.eᵘ, zero(T))
@@ -227,8 +227,8 @@ end
 # the magnitude then we take the larger of ei/xi.
 # This should help with the stability of traces.
 # Note: invented by @tbreloff, but I'm sure it exists somewhere already.
-function update_eligibilty!{T}(e::AbstractArray{T}, x::AbstractArray{T},
-                              γλ::Number; clip::Number = 1e2)
+function update_eligibilty!(e::AbstractArray{T}, x::AbstractArray{T},
+                           γλ::Number; clip::Number = 1e2) where T
     @assert length(e) == length(x)
     @inbounds for i=1:length(e)
         ei = γλ * e[i]
@@ -347,6 +347,6 @@ end
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 
-type EpisodicActorCritic
+mutable struct EpisodicActorCritic
 
 end
