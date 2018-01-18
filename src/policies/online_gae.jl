@@ -97,15 +97,15 @@ We assume the general form of mapping states (s) to actions (a):
     - some concatenated combination of μ/U/σ for multivariate normals
 """
 mutable struct OnlineGAE{T      <: Number,
-               ASET   <: AbstractSet,
-               PHI    <: Learnable,
-               DIST   <: MvNormalTransformation,
-               CRITIC <: ValueCritic,
-            #    P      <: Params,
-               PEN    <: Penalty,
-               AL     <: LearningStrategy,
-               CL     <: LearningStrategy
-              } <: Learnable
+                         ASET   <: AbstractSet,
+                         PHI    <: Learnable,
+                         DIST   <: MvNormalTransformation,
+                         CRITIC <: ValueCritic,
+                       # P      <: Params,
+                         PEN    <: Penalty,
+                         AL     <: LearningStrategy,
+                         CL     <: LearningStrategy
+                        } <: Learnable
     A::ASET           # the action space
     ϕ::PHI            # learnable transformation to output sufficient statistics of D
     D::DIST           # generative transformation for sampling inputs to a
