@@ -101,6 +101,13 @@ The `ismdp` query returns true when the environment is MDP, and false otherwise.
 """
 ismdp(env::AbstractEnvironment) = false
 
+"""
+    maxsteps(env)::Int
+
+Return the max steps in single episode.
+Default is `0` (unlimit).
+"""
+maxsteps(env::AbstractEnvironment) = 0
 
 # ----------------------------------------------------------------
 # Implement this interface for a new policy

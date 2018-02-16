@@ -26,7 +26,9 @@ function Base.start(ep::Episode)
 end
 
 function Base.done(ep::Episode, i)
-    finished(ep.env, state(ep.env))
+  n = maxsteps(ep.env)
+  (n != 0 && ep.niter >= n) && return true
+  finished(ep.env, state(ep.env))
 end
 
 # take one step in the enviroment after querying the policy for an action

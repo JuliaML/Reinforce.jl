@@ -20,11 +20,17 @@ const x_threshold = 2.4
 mutable struct CartPole <: AbstractEnvironment
 	state::Vector{Float64}
 	reward::Float64
+  maxsteps::Int  # max step in each episode
 end
-CartPole() = CartPole(0.1rand(4)-0.05, 0.0)
+CartPole(; maxsteps = 0) = CartPole(0.1rand(4)-0.05, 0.0, maxsteps)
 
-reset!(env::CartPole)  = (env.state = 0.1rand(4)-0.05; env.reward = 0.0; return)
+# see https://github.com/FluxML/model-zoo/pull/23#issuecomment-366030179
+CartPoleV0() = CartPole(maxsteps = 200)
+CartPoleV1() = CartPole(maxsteps = 500)
+
+reset!(env::CartPole) = (env.state = 0.1rand(4)-0.05; env.reward = 0.0; return)
 actions(env::CartPole, s) = DiscreteSet(1:2)
+maxsteps(env::CartPole) = env.maxsteps
 
 function step!(env::CartPole, s, a)
   s = state(env)
