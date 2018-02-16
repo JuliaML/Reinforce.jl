@@ -1,28 +1,28 @@
 
 mutable struct Episode
-    env
-    policy
-    total_reward   # total reward of the episode
-    last_reward
-    niter::Int             # current step in this episode
-    freq::Int               # number of steps between choosing actions
-    # append_action::Bool
-    # last_action
+  env
+  policy
+  total_reward   # total reward of the episode
+  last_reward
+  niter::Int     # current step in this episode
+  freq::Int      # number of steps between choosing actions
+  # append_action::Bool
+  # last_action
 end
 
 function Episode(env, policy; freq=1) #, append_action=false)
-    Episode(env, policy,
-        0.0, 0.0, 1, freq,
-        # append_action,
-        # append_action ? rand(actions(env, state(env))) : zeros(0)
-    )
+  Episode(env, policy,
+          0.0, 0.0, 1, freq,
+          # append_action,
+          # append_action ? rand(actions(env, state(env))) : zeros(0)
+  )
 end
 
 function Base.start(ep::Episode)
-    reset!(ep.env)
-    reset!(ep.policy)
-	ep.total_reward = 0.0
-	ep.niter = 1
+  reset!(ep.env)
+  reset!(ep.policy)
+  ep.total_reward = 0.0
+  ep.niter = 1
 end
 
 function Base.done(ep::Episode, i)
