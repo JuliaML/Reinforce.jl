@@ -7,7 +7,7 @@ const max_torque = 2.0
 angle_normalize(x) = ((x+π) % (2π)) - π
 
 
-type Pendulum <: AbstractEnvironment
+mutable struct Pendulum <: AbstractEnvironment
 	θs::Tuple{Float64,Float64}
 	reward::Float64
 	a::Float64 # last action for rendering

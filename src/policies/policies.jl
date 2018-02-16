@@ -2,7 +2,7 @@
 # default reset
 reset!(policy::AbstractPolicy) = return
 
-type RandomPolicy <: AbstractPolicy end
+mutable struct RandomPolicy <: AbstractPolicy end
 action(policy::RandomPolicy, r, s′, A′) = rand(A′)
 
 # include("online_gae.jl")

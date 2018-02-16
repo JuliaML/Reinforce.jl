@@ -23,7 +23,7 @@ export
 # ----------------------------------------------------------------------------
 
 # TODO: this is a strategy and policy combined... they should really be split into a Learnable and a LearningStrategy
-type CrossEntropyMethod <: LearningStrategy
+mutable struct CrossEntropyMethod <: LearningStrategy
     noise_func::Function    # additional deviation at each timestep
     maxsteps::Int           # max num steps in one episode
     cem_batchsize::Int

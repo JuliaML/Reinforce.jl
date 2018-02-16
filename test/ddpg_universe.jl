@@ -19,7 +19,7 @@ policy = RandomPolicy()
 # quick AR process for arbitrary vectors
 # used for exploration policy of DDPG
 using Distributions
-type ARProcess{T}
+mutable struct ARProcess{T}
     prev::T
     reversion
     noise
@@ -29,7 +29,7 @@ function Base.get(ar::ARProcess)
 end
 # -----------------------------------
 
-type DdpgPolicy
+mutable struct DdpgPolicy
     ns; na; nϕ
     features
     actor

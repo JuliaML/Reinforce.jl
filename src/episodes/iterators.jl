@@ -1,5 +1,5 @@
 
-type Episode
+mutable struct Episode
     env
     policy
     total_reward   # total reward of the episode
@@ -87,7 +87,7 @@ end
 # ---------------------------------------------------------------------
 # iterate through many episodes
 
-type Episodes
+mutable struct Episodes
     env
     kw
 

@@ -31,12 +31,12 @@ const car_height = car_width/2.0
 const clearance = 0.2*car_height
 const flag_height = 0.05
 
-type MountainCarState
+mutable struct MountainCarState
   position::Float64
   velocity::Float64
 end
 
-type MountainCar <: AbstractEnvironment
+mutable struct MountainCar <: AbstractEnvironment
   state::MountainCarState
   reward::Float64
   seed::Int

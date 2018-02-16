@@ -3,7 +3,7 @@ using Reinforce.MountainCarEnv.MountainCar
 gr()
 
 # Deterministic policy that is solving the problem
-type BasicCarPolicy <: Reinforce.AbstractPolicy end
+mutable struct BasicCarPolicy <: Reinforce.AbstractPolicy end
 import Reinforce.action
 
 function action(policy::BasicCarPolicy, r, s, A)

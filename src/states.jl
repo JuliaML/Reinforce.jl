@@ -1,10 +1,10 @@
 
-abstract AbstractState
+abstract type AbstractState end
 
 # ----------------------------------------------------------------
 
 "A StateVector holds both the functions which will populate the state, and the most recent state."
-type StateVector{S} <: AbstractState
+mutable struct StateVector{S} <: AbstractState
 	queries::Vector{Function}
 	state::Vector{S}
 	names::Vector{String}
@@ -32,11 +32,11 @@ end
 
 # ----------------------------------------------------------------
 
-type History{T}
+mutable struct History{T}
     sv::StateVector{T}
     states::Matrix{T}
 end
-History{T}(sv::StateVector{T}) = History(sv, Matrix{T}(length(sv),0))
+History(sv::StateVector{T}) where {T} = History(sv, Matrix{T}(length(sv),0))
 
 function state!(hist::History)
 	s = state!(hist.sv)
