@@ -54,15 +54,16 @@ end
 
 """
   run_episode(f, env, policy)
-  run_episode(env, policy) do
-      # render or something else
+  run_episode(env, policy) do sars
+    s, a, r, s′ = sars
+    # render or something else
   end
 """
 function run_episode(f, env::AbstractEnvironment, π::AbstractPolicy)
   R = 0.
   for sars in Episode(env, π)
     R += sars[3]
-    f()
+    f(sars)
   end
   R
 end
