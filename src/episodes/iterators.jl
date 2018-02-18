@@ -10,13 +10,7 @@ mutable struct Episode
   # last_action
 end
 
-function Episode(env, policy; freq=1) #, append_action=false)
-  Episode(env, policy,
-          0.0, 0.0, 1, freq,
-          # append_action,
-          # append_action ? rand(actions(env, state(env))) : zeros(0)
-  )
-end
+Episode(env, policy; freq = 1) = Episode(env, policy, 0.0, 0.0, 1, freq,)
 
 function Base.start(ep::Episode)
   reset!(ep.env)
@@ -33,70 +27,58 @@ end
 
 # take one step in the enviroment after querying the policy for an action
 function Base.next(ep::Episode, i)
-	env = ep.env
-	s = state(env)
-    A = actions(env, s)
-    r = reward(env)
-	# a = action(ep.policy, r, ep.append_action ? vcat(s,ep.last_action) : s, A)
-	a = action(ep.policy, r, s, A)
-    if !(a in A)
-        warn("action $a is not in $A")
-        # a = rand(A)
-    end
-    @assert a in A
+  env = ep.env
+  π = ep.policy
+  s = state(env)
+  A = actions(env, s)  # action space
+  r = reward(env)
+  a = action(π, r, s, A)
 
-    # take freq steps using action a
-    last_reward = 0.0
-    s′ = s
-    for _=1:ep.freq
-        r, s′ = step!(env, s′, a)
-        last_reward += r
-        done(ep, ep.niter) && break
-    end
+  @assert(a ∈ A, "action $a is not in $A")
 
-    ep.total_reward += last_reward
-    ep.last_reward = last_reward
-    ep.niter = i
+  # take freq steps using action a
+  last_reward = 0.0
+  s′ = s
+  for _ ∈ 1:ep.freq
+    r, s′ = step!(env, s′, a)
+    last_reward += r
+    done(ep, ep.niter) && break
+  end
 
-    # if ep.append_action
-    #     s = vcat(s, ep.last_action)
-    #     s′ = vcat(s′, a)
-    #     ep.last_action = a
-    # end
+  ep.total_reward += last_reward
+  ep.last_reward = last_reward
+  ep.niter = i
 
-	(s, a, r, s′), i+1
+  (s, a, r, s′), i+1
 end
 
 """
-Use do-block notation to run an episode:
-
-```
-run_episode(env,policy) do
-    # render or something else
-end
-```
+  run_episode(f, env, policy)
+  run_episode(env, policy) do
+      # render or something else
+  end
 """
-function run_episode(f::Function, env::AbstractEnvironment, policy::AbstractPolicy; maxsteps = typemax(Int))
-    R = 0.
-    for (i, sars) in enumerate(Episode(env, policy))
-        R += sars[3]
-        f() # the do block
-        i >= maxsteps && break
-    end
-    R
+function run_episode(f, env::AbstractEnvironment, π::AbstractPolicy; maxsteps = typemax(Int))
+  R = 0.
+  for (i, sars) in enumerate(Episode(env, π))
+    R += sars[3]
+    f()  # the do block
+    i >= maxsteps && break
+  end
+  R
 end
 
 # ---------------------------------------------------------------------
 # iterate through many episodes
 
 mutable struct Episodes
-    env
-    kw
+  env
+  kw
 
-    # note: we have different groups of strategies depending on when they should be applied
-    episode_strats    # learning strategies for each episode
-    epoch_strats      # learning strategies for each complete episode
-    iter_strats       # learning strategies applied at every iteration
+  # note: we have different groups of strategies depending on when they should be applied
+  episode_strats    # learning strategies for each episode
+  epoch_strats      # learning strategies for each complete episode
+  iter_strats       # learning strategies applied at every iteration
 end
 
 function Episodes(env;
@@ -104,68 +86,68 @@ function Episodes(env;
                   epoch_strats = [],
                   iter_strats = [],
                   kw...)
-    Episodes(
-        env,
-        kw,
-        MetaLearner(episode_strats...),
-        MetaLearner(epoch_strats...),
-        MetaLearner(iter_strats...)
-    )
+  Episodes(
+    env,
+    kw,
+    MetaLearner(episode_strats...),
+    MetaLearner(epoch_strats...),
+    MetaLearner(iter_strats...)
+  )
 end
 
 length_state(eps::Episodes) = length(state(eps.env)) + length(eps.last_action)
 
 # the main function... run episodes until stopped by one of the epoch/iter strats
 function learn!(policy, eps::Episodes)
-    # setup
-    setup!(eps.epoch_strats, policy)
-    setup!(eps.iter_strats, policy)
+  # setup
+  setup!(eps.epoch_strats, policy)
+  setup!(eps.iter_strats, policy)
 
-    # loop over epochs until done
-    done = false
-    epoch = 1
-    iter = 1
-    while !done
+  # loop over epochs until done
+  done = false
+  epoch = 1
+  iter = 1
 
-        # one episode
-        setup!(eps.episode_strats, policy)
-        ep = Episode(eps.env, policy; eps.kw...)
-        for sars′ in ep
-            learn!(policy, sars′...)
+  while !done
+    # one episode
+    setup!(eps.episode_strats, policy)
+    ep = Episode(eps.env, policy; eps.kw...)
+    for sars′ in ep
+      learn!(policy, sars′...)
 
-            # learn steps
-            for metalearner in (eps.episode_strats, eps.epoch_strats, eps.iter_strats)
-                for strat in metalearner.managers
-                    learn!(policy, strat, sars′)
-                end
-            end
-
-            # iter steps
-            timestep = ep.niter
-            hook(eps.episode_strats, ep, timestep)
-            hook(eps.epoch_strats, ep, epoch)
-            hook(eps.iter_strats, ep, iter)
-
-            # finish the timestep with checks
-            if finished(eps.episode_strats, policy, timestep)
-                break
-            end
-            if finished(eps.epoch_strats, policy, epoch) || finished(eps.iter_strats, policy, iter)
-                done = true
-                break
-            end
-            iter += 1
+      # learn steps
+      for metalearner in (eps.episode_strats, eps.epoch_strats, eps.iter_strats)
+        for strat in metalearner.managers
+          learn!(policy, strat, sars′)
         end
-        info("Finished episode $epoch after $(ep.niter) steps. Reward: $(ep.total_reward) mean(Reward): $(ep.total_reward/max(ep.niter,1))")
-        cleanup!(eps.episode_strats, policy)
-        epoch += 1
+      end
 
+      # iter steps
+      timestep = ep.niter
+      hook(eps.episode_strats, ep, timestep)
+      hook(eps.epoch_strats, ep, epoch)
+      hook(eps.iter_strats, ep, iter)
+
+      # finish the timestep with checks
+      if finished(eps.episode_strats, policy, timestep)
+        break
+      end
+      if finished(eps.epoch_strats, policy, epoch) || finished(eps.iter_strats, policy, iter)
+        done = true
+        break
+      end
+      iter += 1
     end
+    info("Finished episode $epoch after $(ep.niter) steps. Reward: $(ep.total_reward) mean(Reward): $(ep.total_reward/max(ep.niter,1))")
+    cleanup!(eps.episode_strats, policy)
+    epoch += 1
 
-    # tear down
-    cleanup!(eps.epoch_strats, policy)
-    cleanup!(eps.iter_strats, policy)
-    return
+  end
+
+  # tear down
+  cleanup!(eps.epoch_strats, policy)
+  cleanup!(eps.iter_strats, policy)
+  return
 end
 
 # function hook(policy, ep::Episodes, i)

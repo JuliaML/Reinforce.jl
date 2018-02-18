@@ -27,7 +27,6 @@ function test_ep_finished()
 
   for (s, a, r, s′) ∈ ep
     nothing
-    @show s
   end
 
   # @eval finished(::FooEnv, s′) = false
