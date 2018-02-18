@@ -142,9 +142,9 @@ function learn!(policy, eps::Episodes)
 
             # iter steps
             timestep = ep.niter
-            iter_hook(eps.episode_strats, ep, timestep)
-            iter_hook(eps.epoch_strats, ep, epoch)
-            iter_hook(eps.iter_strats, ep, iter)
+            hook(eps.episode_strats, ep, timestep)
+            hook(eps.epoch_strats, ep, epoch)
+            hook(eps.iter_strats, ep, iter)
 
             # finish the timestep with checks
             if finished(eps.episode_strats, policy, timestep)
@@ -168,7 +168,7 @@ function learn!(policy, eps::Episodes)
     return
 end
 
-# function iter_hook(policy, ep::Episodes, i)
+# function hook(policy, ep::Episodes, i)
 #     if ep.should_reset
 #         reset!(ep.env)
 #         reset!(policy)
@@ -201,7 +201,7 @@ end
 #     ep.nsteps += 1
 #     for learner in ep.learners
 #         learn!(policy, learner, ep.nsteps)
-#         iter_hook(learner, policy, ep.nsteps)
+#         hook(learner, policy, ep.nsteps)
 #     end
 #
 #     # if this episode is done, just flag it so we reset next time

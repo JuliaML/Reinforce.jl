@@ -15,7 +15,7 @@ export
 #     f::Function
 # end
 # AnimationStrategy(f::Function) = AnimationStrategy(Animation(), f)
-# iter_hook(strat::AnimationStrategy, policy, i) = (strat.f(policy, i); frame(strat.anim))
+# hook(strat::AnimationStrategy, policy, i) = (strat.f(policy, i); frame(strat.anim))
 # post_hook(strat::AnimationStrategy, policy) = gif(strat.anim)
 
 # ----------------------------------------------------------------------------
