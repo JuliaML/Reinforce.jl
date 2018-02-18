@@ -139,8 +139,8 @@ function OnlineGAE(A::AbstractSet,
     ϵ = zeros(T, np)
     # ∇logP = zeros(T, np)
     # params = consolidate_params(T, ϕ, critic_trans)
-    pre_hook(actor_learner, ϕ)
-    pre_hook(critic_learner, critic.trans)
+    setup!(actor_learner, ϕ)
+    setup!(critic_learner, critic.trans)
     OnlineGAE(A, ϕ, D, critic, γ, λ, ϵ, penalty, actor_learner, critic_learner)
 end
 
@@ -150,8 +150,8 @@ LearnBase.update!(π::OnlineGAE, ::Void) = return
 function Reinforce.reset!(π::OnlineGAE{T}) where T
     fill!(π.ϵ, zero(T))
     # π.critic.lastv = 0
-    # pre_hook(π.actor_learner, π.ϕ)
-    # pre_hook(π.critic_learner, π.critic.trans)
+    # setup!(π.actor_learner, π.ϕ)
+    # setup!(π.critic_learner, π.critic.trans)
 end
 
 function Reinforce.action(π::OnlineGAE, r, s′, A′)

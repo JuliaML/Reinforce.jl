@@ -8,6 +8,7 @@ using OpenAIGym
 # using Distributions
 using Transformations
 using StochasticOptimization
+using LearningStrategies
 
 using MLPlots; gr(size=(500,500))
 
@@ -113,7 +114,7 @@ function do_cem_test(sublearners...; env = GymEnv("SoccerEmptyGoal-v0"),
         gui(tp.plt)
     end)
 
-    learner = make_learner(cem, tracer, sublearners...; maxiter=maxiter, kw...)
+    learner = strategy(cem, tracer, sublearners...; maxiter=maxiter, kw...)
     learn!(policy, learner, repeated(env))
 
     @show policy cem

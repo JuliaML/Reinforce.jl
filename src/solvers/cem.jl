@@ -15,8 +15,8 @@ export
 #     f::Function
 # end
 # AnimationStrategy(f::Function) = AnimationStrategy(Animation(), f)
-# iter_hook(strat::AnimationStrategy, policy, i) = (strat.f(policy, i); frame(strat.anim))
-# post_hook(strat::AnimationStrategy, policy) = gif(strat.anim)
+# hook(strat::AnimationStrategy, policy, i) = (strat.f(policy, i); frame(strat.anim))
+# cleanup!(strat::AnimationStrategy, policy) = gif(strat.anim)
 
 # ----------------------------------------------------------------------------
 
@@ -46,7 +46,7 @@ function CrossEntropyMethod(; #f::Function;
     CrossEntropyMethod(noise_func, maxsteps, cem_batchsize, cem_elitefrac, stopping_norm)
 end
 
-function pre_hook(strat::CrossEntropyMethod, policy)
+function setup!(strat::CrossEntropyMethod, policy)
     n = length(params(policy))
     strat.n = n
     strat.μ = zeros(n)

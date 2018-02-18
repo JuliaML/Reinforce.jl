@@ -12,7 +12,7 @@ using RecipesBase
 import LearnBase: learn!, transform!, grad!, params, grad
 
 using LearningStrategies
-import LearningStrategies: pre_hook, iter_hook, finished, post_hook
+import LearningStrategies: setup!, hook, finished, cleanup!
 
 export
   AbstractEnvironment,
