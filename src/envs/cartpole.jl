@@ -20,63 +20,69 @@ const x_threshold = 2.4
 mutable struct CartPole <: AbstractEnvironment
 	state::Vector{Float64}
 	reward::Float64
+  maxsteps::Int  # max step in each episode
 end
-CartPole() = CartPole(0.1rand(4)-0.05, 0.0)
+CartPole(; maxsteps = 0) = CartPole(0.1rand(4)-0.05, 0.0, maxsteps)
 
-reset!(env::CartPole)  = (env.state = 0.1rand(4)-0.05; env.reward = 0.0; return)
+# see https://github.com/FluxML/model-zoo/pull/23#issuecomment-366030179
+CartPoleV0() = CartPole(maxsteps = 200)
+CartPoleV1() = CartPole(maxsteps = 500)
+
+reset!(env::CartPole) = (env.state = 0.1rand(4)-0.05; env.reward = 0.0; return)
 actions(env::CartPole, s) = DiscreteSet(1:2)
+maxsteps(env::CartPole) = env.maxsteps
 
 function step!(env::CartPole, s, a)
-	s = state(env)
-	x, xvel, θ, θvel = s
+  s = state(env)
+  x, xvel, θ, θvel = s
 
-	force = (a == 1 ? -1 : 1) * force_mag
-	tmp = (force + mass_pole_length * sin(θ) * (θvel^2)) / total_mass
-	θacc = (gravity * sin(θ) - tmp * cos(θ)) /
-			(pole_length * (4/3 - mass_pole * (cos(θ)^2) / total_mass))
-	xacc = tmp - mass_pole_length * θacc * cos(θ) / total_mass
+  force = (a == 1 ? -1 : 1) * force_mag
+  tmp = (force + mass_pole_length * sin(θ) * (θvel^2)) / total_mass
+  θacc = (gravity * sin(θ) - tmp * cos(θ)) /
+          (pole_length * (4/3 - mass_pole * (cos(θ)^2) / total_mass))
+  xacc = tmp - mass_pole_length * θacc * cos(θ) / total_mass
 
-	# update state
-	s[1] = x    += τ * xvel
-	s[2] = xvel += τ * xacc
-	s[3] = θ    += τ * θvel
-	s[4] = θvel += τ * θacc
+  # update state
+  s[1] = x    += τ * xvel
+  s[2] = xvel += τ * xacc
+  s[3] = θ    += τ * θvel
+  s[4] = θvel += τ * θacc
 
-	env.reward = finished(env, s) ? 0.0 : 1.0
-	env.reward, s
+  env.reward = finished(env, s) ? 0.0 : 1.0
+  env.reward, s
 end
 
 function finished(env::CartPole, s′)
-	x, xvel, θ, θvel = s′
-	!(-x_threshold <= x <= x_threshold &&
-	  -θ_threshold <= θ <= θ_threshold)
+  x, xvel, θ, θvel = s′
+  !(-x_threshold <= x <= x_threshold &&
+    -θ_threshold <= θ <= θ_threshold)
 end
 
 
 # ------------------------------------------------------------------------
 
 @recipe function f(env::CartPole)
-    x, xvel, θ, θvel = state(env)
-    legend := false
-    xlims := (-x_threshold, x_threshold)
-    ylims := (-Inf, 2pole_length)
-    grid := false
-    ticks := nothing
+  x, xvel, θ, θvel = state(env)
+  legend := false
+  xlims := (-x_threshold, x_threshold)
+  ylims := (-Inf, 2pole_length)
+  grid := false
+  ticks := nothing
 
-    # pole
-    @series begin
-        linecolor := :red
-        linewidth := 10
-        [x, x + 2pole_length * sin(θ)], [0.0, 2pole_length * cos(θ)]
-    end
+  # pole
+  @series begin
+    linecolor := :red
+    linewidth := 10
+    [x, x + 2pole_length * sin(θ)], [0.0, 2pole_length * cos(θ)]
+  end
 
-    # cart
-    @series begin
-        seriescolor := :black
-        seriestype := :shape
-        hw = 0.5
-        l, r = x-hw, x+hw
-        t, b = 0.0, -0.1
-        [l, r, r, l], [t, t, b, b]
-    end
+  # cart
+  @series begin
+    seriescolor := :black
+    seriestype := :shape
+    hw = 0.5
+    l, r = x-hw, x+hw
+    t, b = 0.0, -0.1
+    [l, r, r, l], [t, t, b, b]
+  end
 end

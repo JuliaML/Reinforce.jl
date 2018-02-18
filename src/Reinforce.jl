@@ -15,30 +15,31 @@ using LearningStrategies
 import LearningStrategies: pre_hook, iter_hook, finished, post_hook
 
 export
-	AbstractEnvironment,
-	reset!,
-	step!,
-	reward,
-	state,
-    finished,
-	actions,
-    ismdp,
+  AbstractEnvironment,
+  reset!,
+  step!,
+  reward,
+  state,
+  finished,
+  actions,
+  ismdp,
+  maxsteps,
 
-	AbstractPolicy,
-	RandomPolicy,
-    OnlineGAE,
-    OnlineActorCritic,
-    EpisodicActorCritic,
-	action,
+  AbstractPolicy,
+  RandomPolicy,
+  OnlineGAE,
+  OnlineActorCritic,
+  EpisodicActorCritic,
+  action,
 
-	AbstractState,
-	StateVector,
-	History,
-	state!,
+  AbstractState,
+  StateVector,
+  History,
+  state!,
 
-	Episode,
-    Episodes,
-    run_episode
+  Episode,
+  Episodes,
+  run_episode
 
 
 # ----------------------------------------------------------------
@@ -46,61 +47,68 @@ export
 
 abstract type AbstractEnvironment end
 
-
 """
-`reset!(env)`
+    reset!(env)
 
 Reset an environment.
 """
 function reset! end
 
-
 """
-r, s′ = step!(env, s, a)
+    r, s′ = step!(env, s, a)
 
 Move the simulation forward, collecting a reward and getting the next state.
 """
 function step! end
-
 
 # note for developers: you should also implement Base.done(env) for episodic environments
 finished(env::AbstractEnvironment, s′) = false
 
 
 """
-`A′ = actions(env, s′)`
+    A′ = actions(env, s′)
 
 Return a list/set/description of valid actions from state `s′`.
 """
 # actions(env::AbstractEnvironment) = actions(env, state(env))
 function actions end
 
-
 # note for developers: you don't need to implement these if you have state/reward fields
 
 """
-`s = state(env)`
+    s = state(env)
 
 Return the current state of the environment.
 """
 state(env::AbstractEnvironment) = env.state
 
 """
-`r = reward(env)`
+    r = reward(env)
 
 Return the current reward of the environment.
 """
 reward(env::AbstractEnvironment) = env.reward
 
 """
-`ismdp(env) --> bool`
+    ismdp(env)::Bool
 
-An environment may be fully observable (MDP) or partially observable (POMDP).  In the case of a partially observable environment, the state `s` is really an observation `o`.  To maintain consistency, we call everything a state, and assume that an environment is free to maintain additional (unobserved) internal state.
+An environment may be fully observable (MDP) or partially observable (POMDP).
+In the case of a partially observable environment,
+the state `s` is really an observation `o`.
+To maintain consistency, we call everything a state, and assume that an
+environment is free to maintain additional (unobserved) internal state.
 
 The `ismdp` query returns true when the environment is MDP, and false otherwise.
 """
 ismdp(env::AbstractEnvironment) = false
 
+"""
+    maxsteps(env)::Int
+
+Return the max steps in single episode.
+Default is `0` (unlimited).
+"""
+maxsteps(env::AbstractEnvironment) = 0
 
 # ----------------------------------------------------------------
 # Implement this interface for a new policy
@@ -135,11 +143,11 @@ include("envs/mountain_car.jl")
 # a keyboard action space
 
 struct KeyboardAction
-    key
+  key
 end
 
 mutable struct KeyboardActionSet{T} <: AbstractSet{T}
-    keys::Vector
+  keys::Vector
 end
 
 LearnBase.randtype(s::KeyboardActionSet) = KeyboardAction
@@ -151,23 +159,24 @@ Base.length(s::KeyboardActionSet) = 1
 # a mouse/pointer action space
 
 struct MouseAction
-    x::Int
-    y::Int
-    button::Int
+  x::Int
+  y::Int
+  button::Int
 end
 
 mutable struct MouseActionSet{T} <: AbstractSet{T}
-    screen_width::Int
-    screen_height::Int
-    button::DiscreteSet{Vector{Int}}
+  screen_width::Int
+  screen_height::Int
+  button::DiscreteSet{Vector{Int}}
 end
 
 LearnBase.randtype(s::MouseActionSet) = MouseAction
-Base.rand(s::MouseActionSet) = MouseAction(rand(1:s.screen_width), rand(1:s.screen_height), rand(s.button))
-Base.in(a::MouseAction, s::MouseActionSet) = a.x in 1:s.screen_width && a.y in 1:s.screen_height && a.button in s.button
+Base.rand(s::MouseActionSet) =
+  MouseAction(rand(1:s.screen_width), rand(1:s.screen_height), rand(s.button))
+Base.in(a::MouseAction, s::MouseActionSet) =
+  a.x in 1:s.screen_width && a.y in 1:s.screen_height && a.button in s.button
 Base.length(s::MouseActionSet) = 1
-
 
 # ----------------------------------------------------------------
 
-end # module
+end  # module Reinforce

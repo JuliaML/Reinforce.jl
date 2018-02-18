@@ -1,13 +1,11 @@
 using Reinforce
 using Base.Test
 
-using Reinforce.MountainCarEnv
+@testset "Reinforce" begin
+  include("foo.jl")
+  include("interface.jl")
 
-env = MountainCar()
-
-i = 0
-for sars in Episode(env, RandomPolicy())
-    i += 1
+  @testset "env" begin
+    include("env/mountain_car.jl")
+  end
 end
-
-@test i>0
