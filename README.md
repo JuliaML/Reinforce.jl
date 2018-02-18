@@ -17,25 +17,39 @@ Packages which build on Reinforce:
 
 ---
 
-New environments are created by subtyping `AbstractEnvironment` and implementing a few methods:
+New environments are created by subtyping `AbstractEnvironment` and implementing
+a few methods:
 
 - `reset!(env)`
-- `actions(env, s) --> A`
-- `step!(env, s, a) --> r, s′`
+- `actions(env, s) -> A`
+- `step!(env, s, a) -> (r, s′)`
 - `finished(env, s′)`
 
 and optional overrides:
 
-- `state(env) --> s`
-- `reward(env) --> r`
+- `state(env) -> s`
+- `reward(env) -> r`
 
 which map to `env.state` and `env.reward` respectively when unset.
 
-- `ismdp(env) --> bool`
+- `ismdp(env) -> Bool`
 
-An environment may be fully observable (MDP) or partially observable (POMDP).  In the case of a partially observable environment, the state `s` is really an observation `o`.  To maintain consistency, we call everything a state, and assume that an environment is free to maintain additional (unobserved) internal state.  The `ismdp` query returns true when the environment is MDP, and false otherwise.
+An environment may be fully observable (MDP) or partially observable (POMDP).
+In the case of a partially observable environment, the state `s` is really 
+an observation `o`.  To maintain consistency, we call everything a state,
+and assume that an environment is free to maintain additional (unobserved) 
+internal state.  The `ismdp` query returns true when the environment is MDP,
+and false otherwise.
+
+- `maxsteps(env) -> Int`
+
+The terminating condition of an episode is control by
+`maxsteps() || finished()`.
+It's default value is `0`, indicates unlimited.
 
 ---
+
+An minimal example for testing purpose is `test/foo.jl`.
 
 TODO: more details and examples
 

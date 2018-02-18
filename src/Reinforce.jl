@@ -106,7 +106,7 @@ ismdp(env::AbstractEnvironment) = false
     maxsteps(env)::Int
 
 Return the max steps in single episode.
-Default is `0` (unlimit).
+Default is `0` (unlimited).
 """
 maxsteps(env::AbstractEnvironment) = 0
 

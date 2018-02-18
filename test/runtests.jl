@@ -8,5 +8,4 @@ using Base.Test
   @testset "env" begin
     include("env/mountain_car.jl")
   end
-
 end
