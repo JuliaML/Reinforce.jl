@@ -122,9 +122,9 @@ function OnlineActorCritic(s::AbstractVector, na::Int;
     actor = Actor(ϕ,D,prep)
     link_nodes!(ϕ, D)
 
-    pre_hook(gaᵛ, zeros(nv))
-    pre_hook(gaᵘ, ϕ)
-    # pre_hook(gaʷ, ϕ)
+    setup!(gaᵛ, zeros(nv))
+    setup!(gaᵘ, ϕ)
+    # setup!(gaʷ, ϕ)
 
     OnlineActorCritic{algo,T,typeof(wgt),typeof(penalty),typeof(actor)}(
         zero(T),

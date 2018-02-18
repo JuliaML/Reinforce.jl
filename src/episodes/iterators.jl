@@ -118,8 +118,8 @@ length_state(eps::Episodes) = length(state(eps.env)) + length(eps.last_action)
 # the main function... run episodes until stopped by one of the epoch/iter strats
 function learn!(policy, eps::Episodes)
     # setup
-    pre_hook(eps.epoch_strats, policy)
-    pre_hook(eps.iter_strats, policy)
+    setup!(eps.epoch_strats, policy)
+    setup!(eps.iter_strats, policy)
 
     # loop over epochs until done
     done = false
@@ -128,7 +128,7 @@ function learn!(policy, eps::Episodes)
     while !done
 
         # one episode
-        pre_hook(eps.episode_strats, policy)
+        setup!(eps.episode_strats, policy)
         ep = Episode(eps.env, policy; eps.kw...)
         for sars′ in ep
             learn!(policy, sars′...)
@@ -176,7 +176,7 @@ end
 #         ep.total_reward = 0.0
 #         ep.nsteps = 0
 #         for learner in ep.learners
-#             pre_hook(learner, policy)
+#             setup!(learner, policy)
 #         end
 #     end
 #
