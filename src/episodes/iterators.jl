@@ -157,14 +157,14 @@ function learn!(policy, eps::Episodes)
             iter += 1
         end
         info("Finished episode $epoch after $(ep.niter) steps. Reward: $(ep.total_reward) mean(Reward): $(ep.total_reward/max(ep.niter,1))")
-        post_hook(eps.episode_strats, policy)
+        cleanup!(eps.episode_strats, policy)
         epoch += 1
 
     end
 
     # tear down
-    post_hook(eps.epoch_strats, policy)
-    post_hook(eps.iter_strats, policy)
+    cleanup!(eps.epoch_strats, policy)
+    cleanup!(eps.iter_strats, policy)
     return
 end
 
@@ -209,7 +209,7 @@ end
 #         ep.should_reset = true
 #         ep.nepisode += 1
 #         for learner in ep.learners
-#             post_hook(learner, policy)
+#             cleanup!(learner, policy)
 #         end
 #         info("Finished episode $(ep.nepisode) after $(ep.nsteps) steps. Reward: $(ep.total_reward)")
 #     end

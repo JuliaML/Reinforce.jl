@@ -16,7 +16,7 @@ export
 # end
 # AnimationStrategy(f::Function) = AnimationStrategy(Animation(), f)
 # hook(strat::AnimationStrategy, policy, i) = (strat.f(policy, i); frame(strat.anim))
-# post_hook(strat::AnimationStrategy, policy) = gif(strat.anim)
+# cleanup!(strat::AnimationStrategy, policy) = gif(strat.anim)
 
 # ----------------------------------------------------------------------------
 
