@@ -1,33 +1,29 @@
-using Reinforce, Plots
-using Reinforce.MountainCarEnv.MountainCar
+using Reinforce
+using Reinforce.MountainCarEnv: MountainCar
+
+using Plots
 gr()
 
 # Deterministic policy that is solving the problem
 mutable struct BasicCarPolicy <: Reinforce.AbstractPolicy end
-import Reinforce.action
 
-function action(policy::BasicCarPolicy, r, s, A)
-  if s.velocity < 0
-    return 1
-  else
-    return 3
-  end
-end
+Reinforce.action(policy::BasicCarPolicy, r, s, A) = s.velocity < 0 ? 1 : 3
 
 # Environment setup
 env = MountainCar()
-on_step(env::MountainCar, niter, sars) = gui(plot(env))
 
-function episode!(env, policy = RandomPolicy(); stepfunc = on_step, kw...)
-    ep = Episode(env, policy; kw...)
-    for sars in ep
-        stepfunc(env, ep.niter, sars)
-    end
-    ep.total_reward, ep.niter
+function episode!(env, π = RandomPolicy())
+  ep = Episode(env, π)
+  for (s, a, r, s′) in ep
+    gui(plot(env))
+  end
+  ep.total_reward, ep.niter
 end
 
 # Main part
-println(episode!(env, BasicCarPolicy()))
+R, n = episode!(env, BasicCarPolicy())
+println("reward: $R, iter: $n")
 
 # This one can be really long...
-println(episode!(env, RandomPolicy()))
+R, n = episode!(env, RandomPolicy())
+println("reward: $R, iter: $n")
