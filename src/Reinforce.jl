@@ -23,6 +23,7 @@ export
   finished,
   actions,
   ismdp,
+  maxsteps,
 
   AbstractPolicy,
   RandomPolicy,
@@ -47,14 +48,14 @@ export
 abstract type AbstractEnvironment end
 
 """
-`reset!(env)`
+    reset!(env)
 
 Reset an environment.
 """
 function reset! end
 
 """
-`r, s′ = step!(env, s, a)`
+    r, s′ = step!(env, s, a)
 
 Move the simulation forward, collecting a reward and getting the next state.
 """
@@ -65,7 +66,7 @@ finished(env::AbstractEnvironment, s′) = false
 
 
 """
-`A′ = actions(env, s′)`
+    A′ = actions(env, s′)
 
 Return a list/set/description of valid actions from state `s′`.
 """
@@ -75,21 +76,21 @@ function actions end
 # note for developers: you don't need to implement these if you have state/reward fields
 
 """
-`s = state(env)`
+    s = state(env)
 
 Return the current state of the environment.
 """
 state(env::AbstractEnvironment) = env.state
 
 """
-`r = reward(env)`
+    r = reward(env)
 
 Return the current reward of the environment.
 """
 reward(env::AbstractEnvironment) = env.reward
 
 """
-`ismdp(env) --> bool`
+    ismdp(env)::Bool
 
 An environment may be fully observable (MDP) or partially observable (POMDP).
 In the case of a partially observable environment,
