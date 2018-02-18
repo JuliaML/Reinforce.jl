@@ -8,6 +8,7 @@ using Reinforce
 # using Distributions
 using Transformations
 using StochasticOptimization
+using LearningStrategies
 
 using Plots; gr(size=(500,200))
 
@@ -68,7 +69,7 @@ function do_cem_test(sublearners...; env = GymEnv("CartPole-v0"),
     end
 
     # create a MetaLearner driven by the CEM strategy
-    learner = make_learner(strat, sublearners...;
+    learner = strategy(strat, sublearners...;
         maxiter=maxiter,
         oniter=iterfunc,
         kw...)
