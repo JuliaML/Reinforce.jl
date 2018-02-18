@@ -24,7 +24,6 @@ function test_ep_finished()
   π = FooPolicy()
   ep = Episode(env, π)
 
-
   for (s, a, r, s′) ∈ ep
     nothing
   end
@@ -35,6 +34,20 @@ function test_ep_finished()
   @test ep.total_reward == -1
 end  # function test_ep_iteration
 
+function test_run_episode()
+  info("interface::run_episode")
+
+  env = FooEnv()
+  π = FooPolicy()
+
+  run_episode(env, π) do sars
+    s, a, r, s′ = sars
+
+    @test a ∈ [1, 2, 3]
+    @test r == -1
+    @test s + 1 == s′
+  end
+end  # function test_run_episode
 
 @testset "interface" begin
   info("interface::iteration")
@@ -44,4 +57,6 @@ end  # function test_ep_iteration
     test_ep_finished()
     @eval finished(::FooEnv, s′) = false  # reset to default
   end
+
+  test_run_episode()
 end  # @testset "env interface"

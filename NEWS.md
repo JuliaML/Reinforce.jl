@@ -10,4 +10,8 @@
     - `CartPoleV0()`: this is equal to `CartPole(maxsteps = 200)`
     - `CartPoleV1()`: this is equal to `CartPole(maxsteps = 500)`
 
+- Keyword `maxsteps` of `run_episode` is deprecated,
+  please overload  `maxsteps`. ([#19])
+
 [#17]: https://github.com/JuliaML/Reinforce.jl/pull/17
+[#19]: https://github.com/JuliaML/Reinforce.jl/pull/19
