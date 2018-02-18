@@ -58,12 +58,11 @@ end
       # render or something else
   end
 """
-function run_episode(f, env::AbstractEnvironment, π::AbstractPolicy; maxsteps = typemax(Int))
+function run_episode(f, env::AbstractEnvironment, π::AbstractPolicy)
   R = 0.
-  for (i, sars) in enumerate(Episode(env, π))
+  for sars in Episode(env, π)
     R += sars[3]
-    f()  # the do block
-    i >= maxsteps && break
+    f()
   end
   R
 end
