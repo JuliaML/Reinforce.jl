@@ -2,6 +2,7 @@ using Reinforce
 using Base.Test
 
 @testset "Reinforce" begin
+  include("foo.jl")
   include("interface.jl")
 
   @testset "env" begin
