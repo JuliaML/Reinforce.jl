@@ -4,8 +4,8 @@
 
 module MountainCarEnv
 
-using Reinforce.AbstractEnvironment
-using LearnBase.DiscreteSet
+using Reinforce: AbstractEnvironment
+using LearnBase: DiscreteSet
 using RecipesBase
 using Distributions
 

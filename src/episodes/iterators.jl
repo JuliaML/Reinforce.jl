@@ -2,31 +2,33 @@
 mutable struct Episode
   env
   policy
-  total_reward   # total reward of the episode
+  total_reward # total reward of the episode
   last_reward
-  niter::Int     # current step in this episode
-  freq::Int      # number of steps between choosing actions
-  # append_action::Bool
-  # last_action
+  niter::Int   # current step in this episode
+  freq::Int    # number of steps between choosing actions
+  maxn::Int    # max steps in an episode - should be constant during an episode
 end
 
-Episode(env, policy; freq = 1) = Episode(env, policy, 0.0, 0.0, 1, freq,)
+Episode(env, policy; freq = 1, maxn=maxsteps(env)) =
+  Episode(env, policy, 0.0, 0.0, 1, freq, maxn)
 
-function Base.start(ep::Episode)
+function _start(ep::Episode)
   reset!(ep.env)
   reset!(ep.policy)
   ep.total_reward = 0.0
-  ep.niter = 1
+  return ep.niter = 1
 end
 
-function Base.done(ep::Episode, i)
-  n = maxsteps(ep.env)
-  (n != 0 && ep.niter >= n) && return true
-  finished(ep.env, state(ep.env))
-end
+_done(ep::Episode, i) =
+  (ep.maxn != 0 && ep.niter >= ep.maxn) || finished(ep.env, state(ep.env))
 
 # take one step in the enviroment after querying the policy for an action
-function Base.next(ep::Episode, i)
+function _next(ep::Episode, i)
+  if _done(ep::Episode, i)
+    # shouldn't be reached on 0.6, `done` is checked before `next`
+    return nothing
+  end
+
   env = ep.env
   π = ep.policy
   s = state(env)
@@ -42,7 +44,7 @@ function Base.next(ep::Episode, i)
   for _ ∈ 1:ep.freq
     r, s′ = step!(env, s′, a)
     last_reward += r
-    done(ep, ep.niter) && break
+    _done(ep, ep.niter) && break
   end
 
   ep.total_reward += last_reward
@@ -50,6 +52,16 @@ function Base.next(ep::Episode, i)
   ep.niter = i
 
   (s, a, r, s′), i+1
+end
+
+
+@static if VERSION >= v"0.7"
+  Base.iterate(ep::Episode)    = _next(ep::Episode, _start(ep))
+  Base.iterate(ep::Episode, i) = _next(ep::Episode, i)
+else
+  Base.start(ep::Episode)   = _start(ep)
+  Base.next(ep::Episode, i) = _next(ep, i)
+  Base.done(ep::Episode, i) = _done(ep, i)
 end
 
 """

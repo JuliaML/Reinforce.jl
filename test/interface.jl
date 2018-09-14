@@ -1,7 +1,7 @@
 import Reinforce: action, actions, finished, ismdp, maxsteps, reset!, reward, state, step!
 
 function test_ep_iteration()
-  info("interface::iteration::maxsteps")
+  @info "interface::iteration::maxsteps"
   env = FooEnv()
   π = FooPolicy()
   ep = Episode(env, π)
@@ -19,7 +19,7 @@ function test_ep_iteration()
 end  # function test_ep_iteration
 
 function test_ep_finished()
-  info("interface::iteration::finished")
+  @info "interface::iteration::finished"
   env = FooEnv()
   π = FooPolicy()
   ep = Episode(env, π)
@@ -35,7 +35,7 @@ function test_ep_finished()
 end  # function test_ep_iteration
 
 function test_run_episode()
-  info("interface::run_episode")
+  @info "interface::run_episode"
 
   env = FooEnv()
   π = FooPolicy()
@@ -50,7 +50,7 @@ function test_run_episode()
 end  # function test_run_episode
 
 @testset "interface" begin
-  info("interface::iteration")
+  @info "interface::iteration"
   test_ep_iteration()
   begin
     @eval finished(::FooEnv, s′) = (s′ == 2)
