@@ -3,7 +3,7 @@ using Reinforce.MountainCarEnv
 @testset "MountainCarEnv" begin
 
 
-info("Reinforce.MountainCarEnv")
+@info "Reinforce.MountainCarEnv"
 
 env = MountainCar()
 

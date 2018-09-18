@@ -4,10 +4,16 @@
 
 module MountainCarEnv
 
-using Reinforce.AbstractEnvironment
-using LearnBase.DiscreteSet
+using Reinforce: AbstractEnvironment
+using LearnBase: DiscreteSet
 using RecipesBase
 using Distributions
+@static if VERSION >= v"0.7"
+  using Random: seed!
+else
+  seed! = srand
+end
+
 
 import Reinforce: reset!, actions, finished, step!
 
@@ -45,7 +51,7 @@ MountainCar(seed=-1) = MountainCar(MountainCarState(0.0, 0.0), 0.0, seed)
 
 function reset!(env::MountainCar)
   if env.seed >= 0
-    srand(env.seed)
+    seed!(env.seed)
     env.seed = -1
   end
 
