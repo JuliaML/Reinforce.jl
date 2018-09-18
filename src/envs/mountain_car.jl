@@ -6,6 +6,7 @@ module MountainCarEnv
 
 using Reinforce: AbstractEnvironment
 using LearnBase: DiscreteSet
+using Random: srand
 using RecipesBase
 using Distributions
 

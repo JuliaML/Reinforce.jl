@@ -56,8 +56,7 @@ end
 
 
 @static if VERSION >= v"0.7"
-  Base.iterate(ep::Episode)    = _next(ep::Episode, _start(ep))
-  Base.iterate(ep::Episode, i) = _next(ep::Episode, i)
+  Base.iterate(ep::Episode, i = _start(ep)) = _next(ep::Episode, i)
 else
   Base.start(ep::Episode)   = _start(ep)
   Base.next(ep::Episode, i) = _next(ep, i)

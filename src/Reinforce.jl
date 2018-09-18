@@ -1,6 +1,3 @@
-
-__precompile__(true)
-
 module Reinforce
 
 using Reexport
@@ -70,7 +67,6 @@ finished(env::AbstractEnvironment, s′) = false
 
 Return a list/set/description of valid actions from state `s′`.
 """
-# actions(env::AbstractEnvironment) = actions(env, state(env))
 function actions end
 
 # note for developers: you don't need to implement these if you have state/reward fields
