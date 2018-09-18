@@ -8,10 +8,7 @@ using Reinforce: AbstractEnvironment
 using LearnBase: DiscreteSet
 using RecipesBase
 using Distributions
-@static if v"0.7" <= VERSION < v"1.0"
-  using Random: srand
-  seed! = srand
-elseif VERSION >= v"1.0"
+@static if VERSION >= v"0.7"
   using Random: seed!
 else
   seed! = srand
