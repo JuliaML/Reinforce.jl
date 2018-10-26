@@ -96,8 +96,8 @@ translate(xs::Array{Float64}, ys::Array{Float64}, t::Array{Float64}) =
   ticks := nothing
 
   # Mountain
-  @series begin
-    xs = linspace(min_position, max_position, 100)
+  @series begin    
+    xs = range(min_position, max_position, length=100)
     ys = height(xs)
     seriestype := :path
     linecolor --> :blue
