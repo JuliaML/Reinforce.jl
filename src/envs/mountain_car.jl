@@ -97,7 +97,7 @@ translate(xs::Array{Float64}, ys::Array{Float64}, t::Array{Float64}) =
 
   # Mountain
   @series begin    
-    xs = range(min_position, max_position, 100)
+    xs = range(min_position, max_position, length=100)
     ys = height(xs)
     seriestype := :path
     linecolor --> :blue
