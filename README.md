@@ -35,9 +35,9 @@ which map to `env.state` and `env.reward` respectively when unset.
 - `ismdp(env) -> Bool`
 
 An environment may be fully observable (MDP) or partially observable (POMDP).
-In the case of a partially observable environment, the state `s` is really 
+In the case of a partially observable environment, the state `s` is really
 an observation `o`.  To maintain consistency, we call everything a state,
-and assume that an environment is free to maintain additional (unobserved) 
+and assume that an environment is free to maintain additional (unobserved)
 internal state.  The `ismdp` query returns true when the environment is MDP,
 and false otherwise.
 
@@ -59,10 +59,10 @@ Agents/policies are created by subtyping `AbstractPolicy` and implementing `acti
 
 ```julia
 mutable struct RandomPolicy <: AbstractPolicy end
-action(policy::RandomPolicy, r, s′, A′) = rand(A′)
+action(policy::RandomPolicy, r, s, A) = rand(A)
 ```
 
-The `action` method maps the last reward and current state to the next chosen action: `(r, s′) --> a′`.
+The `action` method maps the last reward and current state to the next chosen action: `(r, s) --> a`.
 
 ---
 

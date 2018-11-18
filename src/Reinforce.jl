@@ -63,9 +63,9 @@ finished(env::AbstractEnvironment, s′) = false
 
 
 """
-    A′ = actions(env, s′)
+    A = actions(env, s)
 
-Return a list/set/description of valid actions from state `s′`.
+Return a list/set/description of valid actions from state `s`.
 """
 function actions end
 
@@ -112,10 +112,11 @@ maxsteps(env::AbstractEnvironment) = 0
 abstract type AbstractPolicy end
 
 """
-`a′ = action(policy, r, s′, A′)`
+    a = action(policy, r, s, A)
 
-Take in the last reward `r`, current state `s′`, and set of valid actions `A′ = actions(env, s′)`,
-then return the next action `a′`.
+Take in the last reward `r`, current state `s`,
+and set of valid actions `A = actions(env, s)`,
+then return the next action `a`.
 
 Note that a policy could do a 'sarsa-style' update simply by saving the last state and action `(s,a)`.
 """
