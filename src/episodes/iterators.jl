@@ -54,14 +54,7 @@ function _next(ep::Episode, i)
   (s, a, r, s′), i+1
 end
 
-
-@static if VERSION >= v"0.7"
-  Base.iterate(ep::Episode, i = _start(ep)) = _next(ep::Episode, i)
-else
-  Base.start(ep::Episode)   = _start(ep)
-  Base.next(ep::Episode, i) = _next(ep, i)
-  Base.done(ep::Episode, i) = _done(ep, i)
-end
+Base.iterate(ep::Episode, i = _start(ep)) = _next(ep::Episode, i)
 
 """
   run_episode(f, env, policy)
