@@ -22,7 +22,7 @@ mutable struct CartPole <: AbstractEnvironment
 	reward::Float64
   maxsteps::Int  # max step in each episode
 end
-CartPole(; maxsteps = 0) = CartPole(0.1rand(4)-0.05, 0.0, maxsteps)
+CartPole(; maxsteps = 0) = CartPole(0.1rand(4) .- 0.05, 0.0, maxsteps)
 
 # see https://github.com/FluxML/model-zoo/pull/23#issuecomment-366030179
 CartPoleV0() = CartPole(maxsteps = 200)
