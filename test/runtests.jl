@@ -1,6 +1,5 @@
 using Reinforce
-using Compat: @info
-using Compat.Test
+using Test
 
 @testset "Reinforce" begin
   include("foo.jl")
