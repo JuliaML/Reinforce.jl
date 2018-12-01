@@ -1,6 +1,6 @@
 
 # default reset
-reset!(policy::AbstractPolicy) = return
+reset!(π::AbstractPolicy) = π
 
 mutable struct RandomPolicy <: AbstractPolicy end
 action(policy::RandomPolicy, r, s′, A′) = rand(A′)

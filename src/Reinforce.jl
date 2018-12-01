@@ -45,7 +45,7 @@ export
 abstract type AbstractEnvironment end
 
 """
-    reset!(env)
+    reset!(env) -> env
 
 Reset an environment.
 """

@@ -58,7 +58,7 @@ function reset!(env::MountainCar)
   env.state.position = rand(Uniform(min_start, max_start))
   env.state.velocity = 0.0
 
-  return
+  env
 end
 
 actions(env::MountainCar, s) = DiscreteSet(1:3)
@@ -96,7 +96,7 @@ translate(xs::Array{Float64}, ys::Array{Float64}, t::Array{Float64}) =
   ticks := nothing
 
   # Mountain
-  @series begin    
+  @series begin
     xs = range(min_position, max_position, length=100)
     ys = height(xs)
     seriestype := :path

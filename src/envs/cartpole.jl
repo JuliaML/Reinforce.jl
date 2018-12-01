@@ -28,7 +28,7 @@ CartPole(; maxsteps = 0) = CartPole(0.1rand(4) .- 0.05, 0.0, maxsteps)
 CartPoleV0() = CartPole(maxsteps = 200)
 CartPoleV1() = CartPole(maxsteps = 500)
 
-reset!(env::CartPole) = (env.state = 0.1rand(4) .- 0.05; env.reward = 0.0; nothing)
+reset!(env::CartPole) = (env.state = 0.1rand(4) .- 0.05; env.reward = 0.0; env)
 actions(env::CartPole, s) = DiscreteSet(1:2)
 maxsteps(env::CartPole) = env.maxsteps
 
