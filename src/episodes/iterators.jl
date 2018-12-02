@@ -1,33 +1,30 @@
 
-mutable struct Episode
-  env
-  policy
-  total_reward # total reward of the episode
-  last_reward
-  niter::Int   # current step in this episode
-  freq::Int    # number of steps between choosing actions
-  maxn::Int    # max steps in an episode - should be constant during an episode
+mutable struct Episode{E<:AbstractEnvironment,P<:AbstractPolicy,F<:AbstractFloat}
+  env::E
+  policy::P
+  total_reward::F # total reward of the episode
+  last_reward::F
+  niter::Int      # current step in this episode
+  freq::Int       # number of steps between choosing actions
+  maxn::Int       # max steps in an episode - should be constant during an episode
 end
 
-Episode(env, policy; freq = 1, maxn=maxsteps(env)) =
-  Episode(env, policy, 0.0, 0.0, 1, freq, maxn)
+Episode(env::AbstractEnvironment, π::AbstractPolicy; freq = 1, maxn = maxsteps(env)) =
+  Episode(env, π, 0.0, 0.0, 1, freq, maxn)
 
-function _start(ep::Episode)
+function _start!(ep::Episode{E,P,F}) where {E,P,F}
   reset!(ep.env)
   reset!(ep.policy)
-  ep.total_reward = 0.0
-  return ep.niter = 1
+  ep.total_reward = zero(F)
+  ep.niter = 1
 end
 
 _done(ep::Episode, i) =
   (ep.maxn != 0 && ep.niter >= ep.maxn) || finished(ep.env, state(ep.env))
 
 # take one step in the enviroment after querying the policy for an action
-function _next(ep::Episode, i)
-  if _done(ep::Episode, i)
-    # shouldn't be reached on 0.6, `done` is checked before `next`
-    return nothing
-  end
+function Base.iterate(ep::Episode, i = _start!(ep))
+  _done(ep::Episode, i) && return nothing
 
   env = ep.env
   π = ep.policy
@@ -51,25 +48,24 @@ function _next(ep::Episode, i)
   ep.last_reward = last_reward
   ep.niter = i
 
-  (s, a, r, s′), i+1
+  (s, a, r, s′), i + 1
 end
 
-Base.iterate(ep::Episode, i = _start(ep)) = _next(ep::Episode, i)
+"""
+    run_episode(f, env, policy)
+    run_episode(env, policy) do (s, a, r, s′)
+      # render or something else
+    end
 
+Helper function for running an episode,
+and return the total reward gained in this episode.
 """
-  run_episode(f, env, policy)
-  run_episode(env, policy) do sars
-    s, a, r, s′ = sars
-    # render or something else
-  end
-"""
-function run_episode(f, env::AbstractEnvironment, π::AbstractPolicy)
-  R = 0.
-  for sars in Episode(env, π)
-    R += sars[3]
+function run_episode(f::Base.Callable, env::AbstractEnvironment, π::AbstractPolicy)
+  ep = Episode(env, π)
+  for sars in ep
     f(sars)
   end
-  R
+  ep.total_reward
 end
 
 # ---------------------------------------------------------------------
