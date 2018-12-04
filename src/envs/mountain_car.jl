@@ -83,10 +83,10 @@ end
 # ------------------------------------------------------------------------
 height(xs) = sin(3 * xs)*0.45 + 0.55
 rotate(xs::Array{Float64}, ys::Array{Float64}, Θ::Float64) =
-  xs*cos(Θ) - ys*sin(Θ), ys*cos(Θ) + xs*sin(Θ)
+  xs.*cos(Θ) .- ys.*sin(Θ), ys.*cos(Θ) .+ xs.*sin(Θ)
 
 translate(xs::Array{Float64}, ys::Array{Float64}, t::Array{Float64}) =
-  xs + t[1], ys + t[2]
+  xs .+ t[1], ys .+ t[2]
 
 @recipe function f(env::MountainCar)
   legend := false
@@ -97,8 +97,8 @@ translate(xs::Array{Float64}, ys::Array{Float64}, t::Array{Float64}) =
 
   # Mountain
   @series begin
-    xs = range(min_position, max_position, length=100)
-    ys = height(xs)
+    xs = range(min_position, stop = max_position, length = 100)
+    ys = height.(xs)
     seriestype := :path
     linecolor --> :blue
     xs, ys
@@ -111,8 +111,7 @@ translate(xs::Array{Float64}, ys::Array{Float64}, t::Array{Float64}) =
 
     θ = cos(3 * env.state.position)
     xs = [-car_width/2, -car_width/2, car_width/2, car_width/2]
-    ys = [0, car_height, car_height, 0]
-    ys += clearance
+    ys = [0, car_height, car_height, 0] .+ clearance
     xs, ys = rotate(xs, ys, θ)
     translate(xs, ys, [env.state.position, height(env.state.position)])
   end
