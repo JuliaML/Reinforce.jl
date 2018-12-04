@@ -135,6 +135,9 @@ include("solvers.jl")
 include("envs/cartpole.jl")
 include("envs/pendulum.jl")
 include("envs/mountain_car.jl")
+include("envs/multi-armed-bandit.jl")
+
+@reexport using .MultiArmedBanditEnv
 
 # ----------------------------------------------------------------
 # a keyboard action space

@@ -7,5 +7,6 @@ using Test
 
   @testset "env" begin
     include("env/mountain_car.jl")
+    include("env/multi-armed-bandit.jl")
   end
 end
