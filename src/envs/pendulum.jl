@@ -1,5 +1,6 @@
 
 # Ported from: https://github.com/openai/gym/blob/996e5115621bf57b34b9b79941e629a36a709ea1/gym/envs/classic_control/pendulum.py
+import Plots
 
 const max_speed = 8.0
 const max_torque = 2.0
