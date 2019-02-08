@@ -1,6 +1,6 @@
 The Reinforce.jl package is licensed under the MIT "Expat" License:
 
-> Copyright (c) 2016: Thomas Breloff.
+> Copyright (c) 2016-2019: Thomas Breloff.
 > 
 > Permission is hereby granted, free of charge, to any person obtaining a copy
 > of this software and associated documentation files (the "Software"), to deal
