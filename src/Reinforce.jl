@@ -4,6 +4,7 @@ using Reexport
 @reexport using StatsBase
 using Distributions
 using RecipesBase
+using Requires
 
 @reexport using LearnBase
 import LearnBase: learn!, transform!, grad!, params, grad
@@ -37,6 +38,13 @@ export
   Episode,
   Episodes,
   run_episode
+
+
+# ----------------------------------------------------------------
+# Module init
+function __init__()
+  @require Plots="91a5bcdd-55d7-5caf-9e0b-520d859cae80" include("envs/pendulum-recipe.jl")
+end
 
 
 # ----------------------------------------------------------------
