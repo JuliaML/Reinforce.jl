@@ -1,4 +1,4 @@
-
+module CartPoleEnv
 # Ported from: https://github.com/openai/gym/blob/996e5115621bf57b34b9b79941e629a36a709ea1/gym/envs/classic_control/cartpole.py
 # which has header:
 # 		Classic cart-pole system implemented by Rich Sutton et al.
@@ -85,4 +85,6 @@ end
     t, b = 0.0, -0.1
     [l, r, r, l], [t, t, b, b]
   end
+end
+
 end
