@@ -6,6 +6,7 @@ module CartPoleEnv
 
 using Reinforce: AbstractEnvironment
 using LearnBase: DiscreteSet
+using RecipesBase
 @static if VERSION >= v"0.7"
   using Random: seed!
 else
