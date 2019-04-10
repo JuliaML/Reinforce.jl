@@ -5,11 +5,7 @@ using Reinforce: AbstractEnvironment
 using LearnBase: DiscreteSet
 using RecipesBase
 using Distributions
-@static if VERSION >= v"0.7"
-  using Random: seed!
-else
-  seed! = srand
-end
+using Random: seed!
 
 import Reinforce: reset!, actions, finished, step!
 
