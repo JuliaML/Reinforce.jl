@@ -14,8 +14,7 @@ export
   reset!,
   step!,
   actions,
-  finished,
-  f
+  finished
 
 const max_speed = 8.0
 const max_torque = 2.0

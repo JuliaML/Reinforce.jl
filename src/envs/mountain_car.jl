@@ -17,8 +17,7 @@ export
   reset!,
   step!,
   actions,
-  finished,
-  f
+  finished
 
 const min_position = -1.2
 const max_position = 0.6

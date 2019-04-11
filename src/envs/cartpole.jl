@@ -16,8 +16,7 @@ export
   reset!,
   step!,
   actions,
-  finished,
-  f
+  finished
 
 const gravity = 9.8
 const mass_cart = 1.0
