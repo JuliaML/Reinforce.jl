@@ -4,6 +4,20 @@ module CartPoleEnv
 # 		Classic cart-pole system implemented by Rich Sutton et al.
 #		Copied from https://webdocs.cs.ualberta.ca/~sutton/book/code/pole.c
 
+using Reinforce: AbstractEnvironment
+using LearnBase: DiscreteSet
+using RecipesBase
+using Random: seed!
+
+import Reinforce: reset!, actions, finished, step!
+
+export
+  CartPole,
+  reset!,
+  step!,
+  actions,
+  finished
+
 const gravity = 9.8
 const mass_cart = 1.0
 const mass_pole = 0.1

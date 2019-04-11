@@ -8,12 +8,7 @@ using Reinforce: AbstractEnvironment
 using LearnBase: DiscreteSet
 using RecipesBase
 using Distributions
-@static if VERSION >= v"0.7"
-  using Random: seed!
-else
-  seed! = srand
-end
-
+using Random: seed!
 
 import Reinforce: reset!, actions, finished, step!
 
@@ -22,8 +17,7 @@ export
   reset!,
   step!,
   actions,
-  finished,
-  f
+  finished
 
 const min_position = -1.2
 const max_position = 0.6

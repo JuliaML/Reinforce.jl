@@ -1,6 +1,21 @@
 module PendulumEnv
 # Ported from: https://github.com/openai/gym/blob/996e5115621bf57b34b9b79941e629a36a709ea1/gym/envs/classic_control/pendulum.py
 
+using Reinforce: AbstractEnvironment
+using LearnBase: DiscreteSet
+using RecipesBase
+using Distributions
+using Random: seed!
+
+import Reinforce: reset!, actions, finished, step!
+
+export
+  Pendulum,
+  reset!,
+  step!,
+  actions,
+  finished
+
 const max_speed = 8.0
 const max_torque = 2.0
 
