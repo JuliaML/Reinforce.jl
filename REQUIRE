@@ -1,8 +1,0 @@
-julia 0.7
-
-Reexport
-StatsBase
-Distributions
-LearnBase
-RecipesBase
-LearningStrategies 0.2.0

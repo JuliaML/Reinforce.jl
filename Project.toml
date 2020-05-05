@@ -1,6 +1,7 @@
 name = "Reinforce"
 uuid = "0376cc21-f8a9-5fcf-8891-fde1415a4fd3"
 authors = ["Thomas Breloff <tom@breloff.com>"]
+version = "0.3.0"
 
 [deps]
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
