@@ -6,7 +6,8 @@ using Distributions
 using RecipesBase
 
 @reexport using LearnBase
-import LearnBase: learn!, transform!, grad!, params, grad
+using LearnBase: DiscreteSet
+import LearnBase: learn!, transform!, grad!, grad
 
 using LearningStrategies
 import LearningStrategies: setup!, hook, finished, cleanup!
