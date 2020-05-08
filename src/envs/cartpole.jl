@@ -9,7 +9,7 @@ using LearnBase: DiscreteSet
 using RecipesBase
 using Random: seed!
 
-import Reinforce: reset!, actions, finished, step!
+import Reinforce: reset!, actions, finished, step!, state
 
 export
   CartPole,
