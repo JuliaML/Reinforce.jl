@@ -2,7 +2,7 @@ module PendulumEnv
 # Ported from: https://github.com/openai/gym/blob/996e5115621bf57b34b9b79941e629a36a709ea1/gym/envs/classic_control/pendulum.py
 
 using Reinforce: AbstractEnvironment
-using LearnBase: DiscreteSet
+using LearnBase: IntervalSet
 using RecipesBase
 using Distributions
 using Random: seed!
@@ -21,18 +21,23 @@ const max_torque = 2.0
 
 angle_normalize(x) = ((x+π) % (2π)) - π
 
+mutable struct PendulumState
+  θ::Float64
+  θvel::Float64
+end
 
 mutable struct Pendulum <: AbstractEnvironment
-  θs::Tuple{Float64,Float64}
+  state::PendulumState
   reward::Float64
   a::Float64 # last action for rendering
   steps::Int
   maxsteps::Int
 end
-Pendulum(maxsteps=500) = Pendulum((0.,0.),0.,0.,0,maxsteps)
+Pendulum(maxsteps=500) = Pendulum(PendulumState(0.,0.),0.,0.,0,maxsteps)
 
 function reset!(env::Pendulum)
-  env.θs = (rand(Uniform(-π, π)), rand(Uniform(-1., 1.)))
+  env.state.θ = rand(Uniform(-π, π))
+  env.state.θvel = rand(Uniform(-1., 1.))
   env.reward = 0.0
   env.a = 0.0
   env.steps = 0
@@ -42,7 +47,8 @@ end
 actions(env::Pendulum, s) = IntervalSet(-max_torque, max_torque)
 
 function step!(env::Pendulum, s, a)
-  θ, θvel = env.θs
+  θ = env.state.θ
+  θvel = env.state.θvel
   g = 10.0
   m = 1.0
   l = 1.0
@@ -56,7 +62,8 @@ function step!(env::Pendulum, s, a)
   newθvel = θvel + (-1.5g/l * sin(θ+π) + 3/(m*l^2)*a) * dt
   newθ = θ + newθvel * dt
   newθvel = clamp(newθvel, -max_speed, max_speed)
-  env.θs = newθ, newθvel
+  env.state.θ = newθ
+  env.state.θvel = newθvel
 
   env.steps += 1
   env.reward, state(env)
@@ -64,7 +71,8 @@ end
 
 
 function state(env::Pendulum)
-  θ, θvel = env.θs
+  θ = env.state.θ
+  θvel = env.state.θvel
   Float64[cos(θ), sin(θ), θvel]
 end
 
@@ -84,7 +92,7 @@ finished(env::Pendulum, s′) = env.steps >= env.maxsteps
     w = 0.2
     x = [-w,w,w,-w]
     y = [-.1,-.1,1,1]
-    θ = env.θs[1]
+    θ = env.state.θ
     fillcolor := :red
     seriestype := :shape
     x*cos(θ) - y*sin(θ), y*cos(θ) + x*sin(θ)
@@ -95,7 +103,7 @@ finished(env::Pendulum, s′) = env.steps >= env.maxsteps
     seriestype := :scatter
     markersize := 10
     markercolor := :black
-    annotations := [(0, -0.2, Plots.text("a: $(env.a)", :top))]
+    annotations := [(0, -0.2, "a: $(env.a)", :top)]
     [0],[0]
   end
 end
