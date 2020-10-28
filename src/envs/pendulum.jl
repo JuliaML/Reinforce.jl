@@ -7,7 +7,7 @@ using RecipesBase
 using Distributions
 using Random: seed!
 
-import Reinforce: reset!, actions, finished, step!
+import Reinforce: reset!, actions, finished, step!, state
 
 export
   Pendulum,
