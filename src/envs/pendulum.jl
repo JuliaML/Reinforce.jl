@@ -14,7 +14,8 @@ export
   reset!,
   step!,
   actions,
-  finished
+  finished, 
+  state
 
 const max_speed = 8.0
 const max_torque = 2.0
@@ -73,7 +74,7 @@ end
 function state(env::Pendulum)
   θ = env.state.θ
   θvel = env.state.θvel
-  Float64[cos(θ), sin(θ), θvel]
+  Float64[θ, θvel]
 end
 
 finished(env::Pendulum, s′) = env.steps >= env.maxsteps
