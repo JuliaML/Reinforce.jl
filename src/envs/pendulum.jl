@@ -22,17 +22,23 @@ const max_torque = 2.0
 
 angle_normalize(x) = ((x+π) % (2π)) - π
 
+mutable struct PendulumState{T<:Float64}  <: AbstractVector{T}
+  θ::T
+  θvel::T
+  PendulumState(θ, θvel) = Float64[θ, θvel]
+end
+
 mutable struct Pendulum <: AbstractEnvironment
-  state::Vector{Float64}
+  state::AbstractVector
   reward::Float64
   a::Float64 # last action for rendering
   steps::Int
   maxsteps::Int
 end
-Pendulum(maxsteps=500) = Pendulum([0.,0.],0.,0.,0,maxsteps)
+Pendulum(maxsteps=500) = Pendulum(PendulumState(0.,0.),0.,0.,0,maxsteps)
 
 function reset!(env::Pendulum)
-  env.state = [rand(Uniform(-π, π)), rand(Uniform(-1., 1.))]
+  env.state = PendulumState(rand(Uniform(-π, π)), rand(Uniform(-1., 1.)))
   env.reward = 0.0
   env.a = 0.0
   env.steps = 0
