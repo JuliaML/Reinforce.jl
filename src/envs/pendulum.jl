@@ -77,7 +77,7 @@ function step!(env::Pendulum, s, a)
   newθvel = θvel + (-1.5g/l * sin(θ+π) + 3/(m*l^2)*a) * dt
   newθ = θ + newθvel * dt
   newθvel = clamp(newθvel, -max_speed, max_speed)
-  env.state = [newθ, newθvel]
+  env.state = PendulumState(newθ, newθvel)
 
   env.steps += 1
   env.reward, env.state
@@ -105,7 +105,7 @@ finished(env::Pendulum, s′) = env.steps >= env.maxsteps
     w = 0.2
     x = [-w,w,w,-w]
     y = [-.1,-.1,1,1]
-    θ = env.state[1]
+    θ = env.state.θ
     fillcolor := :red
     seriestype := :shape
     x*cos(θ) - y*sin(θ), y*cos(θ) + x*sin(θ)
