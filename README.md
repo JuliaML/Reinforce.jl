@@ -1,3 +1,7 @@
+# DEPRECATED
+
+This package is discontinued. Please check [ReinforcementLearning.jl](https://github.com/JuliaReinforcementLearning/ReinforcementLearning.jl), [POMDPs.jl](https://github.com/JuliaPOMDP/POMDPs.jl) or [AlphaZero.jl](https://github.com/jonathan-laurent/AlphaZero.jl) instead.
+
 # Reinforce
 
 [![Build Status](https://travis-ci.org/JuliaML/Reinforce.jl.svg?branch=master)](https://travis-ci.org/JuliaML/Reinforce.jl)
